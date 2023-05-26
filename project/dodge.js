@@ -33,7 +33,14 @@ export class Dodge extends Scene {
         }
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 0, 50), vec3(0, 0, 0), vec3(0, 1, 0));
+
+        this.smallSquare_positions = Mat4.identity().times(Mat4.translation(-20,-10,0)); // Initial position of the smallBalls
+        this.smallSquare_velocities = vec4(0.2, 0.2, 0, 0); // Initial velocity of the smallBalls
+
+
+        // Interactivities
         this.player_location = Mat4.identity();
+        this.target_location = Mat4.identity();
         this.leftPressed = false;
         this.rightPressed = false;
         this.upPressed = false;
@@ -62,59 +69,143 @@ export class Dodge extends Scene {
 
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, .1, 1000);
 
-        // Draw objects and transform them 
-        // this.shapes.[XXX].draw([XXX]) // <--example
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
-        let player_transform = Mat4.identity();
         // The parameters of the Light are: position, color, size
         const light_position = vec4(0, 5, 5, 1);
         // The parameters of the Light are: position, color, size
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
-        if (this.leftPressed) {
-            if (this.player_location[0][3] > -36) {
-                this.player_location = this.player_location.times(Mat4.translation(-0.5,0,0));
-            }
-            this.leftPressed = false;
-        }
 
-        if (this.rightPressed) {
-            if (this.player_location[0][3] < 36) {
-                this.player_location = this.player_location.times(Mat4.translation(0.5,0,0));
-            }
-            this.rightPressed = false;
-        }
-
-        if (this.upPressed) {
-            if (this.player_location[1][3] < 19.25) {
-                this.player_location = this.player_location.times(Mat4.translation(0,0.25,0));
-            }
-            this.upPressed = false;
-        }
-
-        if (this.downPressed) {
-            if (this.player_location[1][3] > -19.25) {
-                this.player_location = this.player_location.times(Mat4.translation(0,-0.25,0));
-            }
-            this.downPressed = false;
-        }
-
-        this.shapes.sphere4.draw(
-            context,
-            program_state,
-            this.player_location,
-            this.materials.player
-        );
-        
-        // Define the initial position and velocity of the ball
-
+        // screen size
+        // top 20
+        // left -36.5
+        // right 36.5
+        // bottom -20
         const xMin = -36.5;
         const xMax = 36.5;
         const yMin = -20;
         const yMax = 20;
 
-        const period = 0.1 * Math.PI;  // Adjust this value to control the speed of fluctuation
+        if (this.leftPressed) {
+            if (this.target_location[0][3] > xMin) {
+                this.target_location = this.target_location.times(Mat4.translation(-0.25,0,0));
+            }
+            this.leftPressed = false;
+        }
 
-        /*// Calculate the fluctuating value between 0 and 1 using the sine function
+        if (this.rightPressed) {
+            if (this.target_location[0][3] < xMax) {
+                this.target_location = this.target_location.times(Mat4.translation(0.25,0,0));
+            }
+            this.rightPressed = false;
+        }
+
+        if (this.upPressed) {
+            if (this.target_location[1][3] < yMax) {
+                this.target_location = this.target_location.times(Mat4.translation(0,0.25,0));
+            }
+            this.upPressed = false;
+        }
+
+        if (this.downPressed) {
+            if (this.target_location[1][3] > yMin) {
+                this.target_location = this.target_location.times(Mat4.translation(0,-0.25,0));
+            }
+            this.downPressed = false;
+        }
+
+        // Smoothing player's movement
+        const blending_factor = 0.1;
+        this.player_location = this.player_location.map((x, i) =>
+            Vector.from(x).mix(Vector.from(this.target_location[i]), blending_factor)
+        );
+
+        //  Player
+        const player_transform = this.player_location.times(Mat4.scale(0.60, 0.60, 0.60));
+
+        this.shapes.sphere4.draw(
+            context,
+            program_state,
+            player_transform,
+            this.materials.player
+        );
+
+        //Small square
+
+        function getRandomNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1) + min);
+        }
+        const period = 4;
+        let fluctuatingValue = (1 + Math.sin(t * (2 * Math.PI / period))) / 2; // Calculate fluctuating value between 0 and 1
+        let x = xMin + fluctuatingValue * (xMax - xMin);
+
+        
+        // Bounce off the walls
+        if (this.smallSquare_positions[0][3] + 0.125 >= xMax || this.smallSquare_positions[0][3] - 0.125 <= xMin) {
+            this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
+        }
+        if (this.smallSquare_positions[1][3] + 0.125 >= yMax || this.smallSquare_positions[1][3] - 0.125 <= yMin) {
+            this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
+        }
+
+        let squareDist = Math.sqrt(Math.pow(this.smallSquare_positions[0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[1][3] - this.player_location[1][3], 2));
+        let squareAngle = Math.tan(Math.abs(this.smallSquare_positions[1][3] - this.player_location[1][3])/Math.abs(this.smallSquare_positions[0][3] - this.player_location[0][3]));
+
+        if (fluctuatingValue > 0.99) {
+            if (this.smallSquare_positions[0][3] >= this.player_location[0][3] && this.smallSquare_velocities[0] > 0) {
+                this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
+            } else if (this.smallSquare_positions[0][3] < this.player_location[0][3] && this.smallSquare_velocities[0] < 0) {
+                this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
+            }
+            if (this.smallSquare_positions[1][3] >= this.player_location[1][3] && this.smallSquare_velocities[1] > 0) {
+                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
+            } else if (this.smallSquare_positions[1][3] < this.player_location[1][3] && this.smallSquare_velocities[1] < 0) {
+                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
+            } 
+        }
+        /*else if (this.smallSquare_positions[0][3] < this.player_location[0][3] && this.smallSquare_velocities[0] < 0) {
+            this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
+        }
+        else if (this.smallSquare_positions[1][3] < this.player_location[1][3] && this.smallSquare_velocities[1] < 0) {
+                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
+            }*/
+        // Small squares
+        this.smallSquare_positions[0][3] += this.smallSquare_velocities[0];
+        this.smallSquare_positions[1][3] += this.smallSquare_velocities[1];
+
+
+        // Draw the smallBalls
+        let smallBalls_transform = this.smallSquare_positions.times(Mat4.scale(0.4,0.4,0.4));
+
+        this.shapes.cube.draw(
+        context,
+        program_state,
+        smallBalls_transform,
+        this.materials.smallBalls
+        );
+
+        // Define the initial position and velocity of the ball
+
+
+        /*const period = 0.1 * Math.PI;  // Adjust this value to control the speed of fluctuation
+
+
+        // Apply the transformation to the ball
+        const smallBalls_transform = Mat4.identity().times(Mat4.translation(player_transform[0][3], player_transform[1][3], 0))
+                                    .times(Mat4.scale(0.30, 0.30, 0.30));
+
+        const smallBalls_move = smallBalls_transform.map((x, i) =>
+            Vector.from(x).mix(Vector.from(player_transform[i]), 0.0005)
+        );
+        
+        this.shapes.cube.draw(
+            context,
+            program_state,
+            smallBalls_move,
+            this.materials.smallBalls
+        );*/
+
+
+                /*// Calculate the fluctuating value between 0 and 1 using the sine function
         const fluctuatingValue = (1 + Math.sin(t * period)) / 2;
         const x = xMin + fluctuatingValue * (xMax - xMin);
         const y = yMin + fluctuatingValue * (yMax - yMin);
@@ -122,25 +213,6 @@ export class Dodge extends Scene {
         // Apply the transformation to the ball
         let smallBalls_transform = Mat4.identity().times(Mat4.translation(x, y, ballPosition[2]))
                                     .times(Mat4.scale(0.5, 0.5, 0.5));*/
-        const fluctuatingValue = (1 + Math.sin(t * period)) / 2;
-        const x = xMin + fluctuatingValue * ((player_transform[0][3]+1) - xMin);
-        const y = yMin + fluctuatingValue * ((player_transform[1][3]-1) - yMin);
-        console.log(player_transform[0])
-        // Apply the transformation to the ball
-        let smallBalls_transform = Mat4.identity().times(Mat4.translation(x, y, 0))
-                                    .times(Mat4.scale(0.5, 0.5, 0.5));
-        
-        //screen size
-        //top 20
-        //left -36.5
-        //right 36.5
-        //bottom -20
-        this.shapes.cube.draw(
-            context,
-            program_state,
-            smallBalls_transform,
-            this.materials.smallBalls
-        );
 
     }
 }
