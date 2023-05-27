@@ -10,41 +10,43 @@ export class Dodge extends Scene {
         super();
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
+        // TODO: Fix Text_Line in common.js to correct draw text
         this.shapes = {
-            /*torus: new defs.Torus(15, 15),
-            torus2: new defs.Torus(3, 15),
-            circle: new defs.Regular_2D_Polygon(1, 15),
-            // TODO:  Fill in as many additional shape instances as needed in this key/value table.
-            //        (Requirement 1)
-            sphere1: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(1),
-            sphere2: new (defs.Subdivision_Sphere.prototype.make_flat_shaded_version())(2),
-            sphere3: new defs.Subdivision_Sphere(3),*/
             sphere4: new defs.Subdivision_Sphere(4),
             cube: new defs.Cube(),
-            
+            score: new defs.Text_Line(20),
         };
 
         // *** Materials
+        // TODO: ADD Texture
         this.materials = {
             player: new Material(new defs.Phong_Shader(),
                 {ambient: .3, diffusivity: .5, color: hex_color("#0000FF")}),
             smallBalls: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
+            scoreBox: new Material(new defs.Phong_Shader(),
+                {ambient: .4, diffusivity: .6, color: hex_color("#FFFFFF")}),
+
         }
 
         this.initial_camera_location = Mat4.look_at(vec3(0, 0, 50), vec3(0, 0, 0), vec3(0, 1, 0));
 
-        this.smallSquare_positions = Mat4.identity().times(Mat4.translation(-20,-10,0)); // Initial position of the smallBalls
-        this.smallSquare_velocities = vec4(0.2, 0.2, 0, 0); // Initial velocity of the smallBalls
+        // Game State
+        this.gameOver = false;
 
-
-        // Interactivities
+        // Player: Location and Interactivities
+        this.score = 0;
         this.player_location = Mat4.identity();
         this.target_location = Mat4.identity();
         this.leftPressed = false;
         this.rightPressed = false;
         this.upPressed = false;
         this.downPressed = false;
+
+        // Small Squares: Location and Velocities
+        this.smallSquare_positions = [];
+        this.smallSquare_velocities = [];
+        this.smallSquare_num = 0;
     }
 
     make_control_panel() {
@@ -66,9 +68,7 @@ export class Dodge extends Scene {
             // Define the global camera and projection matrices, which are stored in program_state.
             program_state.set_camera(this.initial_camera_location);
         }
-
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, .1, 1000);
-
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         // The parameters of the Light are: position, color, size
         const light_position = vec4(0, 5, 5, 1);
@@ -76,136 +76,185 @@ export class Dodge extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // screen size
-        // top 20
-        // left -36.5
-        // right 36.5
-        // bottom -20
+        // TODO: ADD BACKGROUND
         const xMin = -36.5;
         const xMax = 36.5;
         const yMin = -20;
         const yMax = 20;
 
-        if (this.leftPressed) {
-            if (this.target_location[0][3] > xMin) {
-                this.target_location = this.target_location.times(Mat4.translation(-0.25,0,0));
+        if (this.gameOver == false) {
+            // TODO: ADD MORE TRANFORMATION EFFECTS TO EACH OBJECT (ROTATION and SUCH)
+            // Interactivities functions
+            if (this.leftPressed) {
+                if (this.target_location[0][3] > xMin) {
+                    this.target_location = this.target_location.times(Mat4.translation(-0.75,0,0));
+                }
+                this.leftPressed = false;
+            } if (this.rightPressed) {
+                if (this.target_location[0][3] < xMax) {
+                    this.target_location = this.target_location.times(Mat4.translation(0.75,0,0));
+                }
+                this.rightPressed = false;
+            } if (this.upPressed) {
+                if (this.target_location[1][3] < yMax) {
+                    this.target_location = this.target_location.times(Mat4.translation(0,0.75,0));
+                }
+                this.upPressed = false;
+            } if (this.downPressed) {
+                if (this.target_location[1][3] > yMin) {
+                    this.target_location = this.target_location.times(Mat4.translation(0,-0.75,0));
+                }
+                this.downPressed = false;
             }
-            this.leftPressed = false;
-        }
 
-        if (this.rightPressed) {
-            if (this.target_location[0][3] < xMax) {
-                this.target_location = this.target_location.times(Mat4.translation(0.25,0,0));
+            // Smoothing out player's movement
+            const blending_factor = 0.25;
+            this.player_location = this.player_location.map((x, i) =>
+                Vector.from(x).mix(Vector.from(this.target_location[i]), blending_factor)
+            );
+
+            // Drawing Player
+            const player_transform = this.player_location.times(Mat4.scale(0.60, 0.60, 0.60));
+            this.shapes.sphere4.draw(
+                context,
+                program_state,
+                player_transform,
+                this.materials.player
+            );
+
+            // Small Squares Implementation
+            let base_speedX = 0.1
+            let base_speedY = 0.1
+            const xPos = Math.random() < 0.5 ? 36 : -36;
+            const yPos = Math.random() < 0.5 ? 19 : -19;
+            const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
+            const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
+            //const yVel = Math.random() * (0.2 - (-0.2)) + (-0.2);
+            const interval = 2;
+            const maxCnt = 5;
+
+            // Small Squares spawning behaviors
+            let spawnInterval = t%interval;
+            //console.log(spawnInterval);
+            if (spawnInterval >= (interval-0.02) && this.smallSquare_num < maxCnt) {
+                this.smallSquare_positions.push(Mat4.identity().times(Mat4.translation(xPos,yPos,0))); // Initial position
+                this.smallSquare_velocities.push(vec4(xVel, yVel, 0, 0)); // Initial velocity
+                this.smallSquare_num += 1;
             }
-            this.rightPressed = false;
-        }
+            
+            // Small Square Movements
+            for (let i = 0; i < this.smallSquare_positions.length; i++) {
+                let distFromPlayer = Math.sqrt(Math.pow(this.smallSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[i][1][3] - this.player_location[1][3], 2));
+                //let squareAngle = Math.tan(Math.abs(this.smallSquare_positions[1][3] - this.player_location[1][3])/Math.abs(this.smallSquare_positions[0][3] - this.player_location[0][3]));
+                
+                // Collision Detection for Player
+                if (distFromPlayer > 0 && distFromPlayer < 1.4) {
+                    this.gameOver = true;
+                } else {
+                    // Follow the player if it is within a certain radius
+                    let orbitRadius = 5
+                    if (distFromPlayer > orbitRadius && distFromPlayer < 12) {
+                        // If it is to the right of the player
+                        if (this.smallSquare_positions[i][0][3] >= this.player_location[0][3] + orbitRadius && this.smallSquare_velocities[i][0] > 0) {
+                            this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
+                        } 
+                        // If it is to the left of the player
+                        else if (this.smallSquare_positions[i][0][3] < this.player_location[0][3] - orbitRadius && this.smallSquare_velocities[i][0] < 0) {
+                            this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
+                        }
+                        // If it is above of the player
+                        if (this.smallSquare_positions[i][1][3] > this.player_location[1][3] + orbitRadius-2.5 && this.smallSquare_velocities[i][1] > 0) {
+                            this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
+                        }
+                        // If it is below of the player
+                        else if (this.smallSquare_positions[i][1][3] < this.player_location[1][3] - orbitRadius-2.5 && this.smallSquare_velocities[i][1] < 0) {
+                            this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
+                        }
+                    }
+                    // Bounce-Off-Wall behaviors
+                    if (this.smallSquare_positions[i][0][3] + 0.125 >= xMax || this.smallSquare_positions[i][0][3] - 0.125 <= xMin) {
+                        this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
+                    }
+                    if (this.smallSquare_positions[i][1][3] + 0.125 >= yMax || this.smallSquare_positions[i][1][3] - 0.125 <= yMin) {
+                        this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
+                    }
 
-        if (this.upPressed) {
-            if (this.target_location[1][3] < yMax) {
-                this.target_location = this.target_location.times(Mat4.translation(0,0.25,0));
+                    // Drive Behaviors
+                    if (this.smallSquare_positions[i][0][3] == this.player_location[0][3]) {
+                        this.smallSquare_positions[i][1][3] += this.smallSquare_velocities[i][1];
+                    } else if (this.smallSquare_positions[i][1][3] == this.player_location[1][3]) {
+                        this.smallSquare_positions[i][0][3] += this.smallSquare_velocities[i][0];
+                    } else {
+                        this.smallSquare_positions[i][0][3] += this.smallSquare_velocities[i][0];
+                        this.smallSquare_positions[i][1][3] += this.smallSquare_velocities[i][1];
+                    }
+                }
             }
-            this.upPressed = false;
-        }
 
-        if (this.downPressed) {
-            if (this.target_location[1][3] > yMin) {
-                this.target_location = this.target_location.times(Mat4.translation(0,-0.25,0));
+            // Small Squares Collision Detection for Explosion
+            // TODO: ADD EXPLOSION
+            for (let i = 0; i < this.smallSquare_positions.length; i++) {
+                for (let j = 0; j < this.smallSquare_positions.length; j++) {
+                    if(i != j) {
+                        const dist = Math.sqrt(
+                            Math.pow(this.smallSquare_positions[i][0][3] - this.smallSquare_positions[j][0][3], 2) +
+                            Math.pow(this.smallSquare_positions[i][1][3] - this.smallSquare_positions[j][1][3], 2)
+                          );
+
+                        // Check if the distance is less than a threshold (indicating a collision)
+                        if (dist < 1) {
+                        this.smallSquare_positions.splice(j, 1);
+                        this.smallSquare_velocities.splice(j, 1);
+                        this.smallSquare_positions.splice(i, 1);
+                        this.smallSquare_velocities.splice(i, 1);
+                        this.smallSquare_num -= 2;
+                        this.score += 1;
+                        }
+
+                    }
+                }
+              }
+
+            // Draw the smallBalls
+            for (let i = 0; i < this.smallSquare_positions.length; i++) {
+                var smallSquare_transform = this.smallSquare_positions[i].times(Mat4.scale(0.4, 0.4, 0.4));
+                this.shapes.cube.draw(
+                    context,
+                    program_state,
+                    smallSquare_transform,
+                    this.materials.smallBalls
+                );
             }
-            this.downPressed = false;
-        }
 
-        // Smoothing player's movement
-        const blending_factor = 0.1;
-        this.player_location = this.player_location.map((x, i) =>
-            Vector.from(x).mix(Vector.from(this.target_location[i]), blending_factor)
-        );
 
-        //  Player
-        const player_transform = this.player_location.times(Mat4.scale(0.60, 0.60, 0.60));
+            // TODO: ADD Other obstacles
 
-        this.shapes.sphere4.draw(
+            // Display score
+            let score_text = "Score: " + this.score;
+            this.shapes.score.set_string(context, score_text, color(1, 1, 1, 1), 0.5);
+            var scoreBox = Mat4.identity().times(Mat4.translation(-35,19,0));
+            this.shapes.score.draw(
+                context,
+                program_state,
+                scoreBox,
+                this.materials.scoreBox
+            );
+
+
+    } 
+    // GAME OVER
+    else {
+        /*var scoreBox = Mat4.identity().times(Mat4.translation(-35,19,0));
+        this.shapes.cube.draw(
             context,
             program_state,
-            player_transform,
-            this.materials.player
-        );
-
-        //Small square
-
-        function getRandomNumber(min, max) {
-            return Math.floor(Math.random() * (max - min + 1) + min);
-        }
-        const period = 4;
-        let fluctuatingValue = (1 + Math.sin(t * (2 * Math.PI / period))) / 2; // Calculate fluctuating value between 0 and 1
-        let x = xMin + fluctuatingValue * (xMax - xMin);
-
-        
-        // Bounce off the walls
-        if (this.smallSquare_positions[0][3] + 0.125 >= xMax || this.smallSquare_positions[0][3] - 0.125 <= xMin) {
-            this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
-        }
-        if (this.smallSquare_positions[1][3] + 0.125 >= yMax || this.smallSquare_positions[1][3] - 0.125 <= yMin) {
-            this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
-        }
-
-        let squareDist = Math.sqrt(Math.pow(this.smallSquare_positions[0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[1][3] - this.player_location[1][3], 2));
-        let squareAngle = Math.tan(Math.abs(this.smallSquare_positions[1][3] - this.player_location[1][3])/Math.abs(this.smallSquare_positions[0][3] - this.player_location[0][3]));
-
-        if (fluctuatingValue > 0.99) {
-            if (this.smallSquare_positions[0][3] >= this.player_location[0][3] && this.smallSquare_velocities[0] > 0) {
-                this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
-            } else if (this.smallSquare_positions[0][3] < this.player_location[0][3] && this.smallSquare_velocities[0] < 0) {
-                this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
-            }
-            if (this.smallSquare_positions[1][3] >= this.player_location[1][3] && this.smallSquare_velocities[1] > 0) {
-                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
-            } else if (this.smallSquare_positions[1][3] < this.player_location[1][3] && this.smallSquare_velocities[1] < 0) {
-                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
-            } 
-        }
-        /*else if (this.smallSquare_positions[0][3] < this.player_location[0][3] && this.smallSquare_velocities[0] < 0) {
-            this.smallSquare_velocities[0] = -this.smallSquare_velocities[0];
-        }
-        else if (this.smallSquare_positions[1][3] < this.player_location[1][3] && this.smallSquare_velocities[1] < 0) {
-                this.smallSquare_velocities[1] = -this.smallSquare_velocities[1];
-            }*/
-        // Small squares
-        this.smallSquare_positions[0][3] += this.smallSquare_velocities[0];
-        this.smallSquare_positions[1][3] += this.smallSquare_velocities[1];
-
-
-        // Draw the smallBalls
-        let smallBalls_transform = this.smallSquare_positions.times(Mat4.scale(0.4,0.4,0.4));
-
-        this.shapes.cube.draw(
-        context,
-        program_state,
-        smallBalls_transform,
-        this.materials.smallBalls
-        );
-
-        // Define the initial position and velocity of the ball
-
-
-        /*const period = 0.1 * Math.PI;  // Adjust this value to control the speed of fluctuation
-
-
-        // Apply the transformation to the ball
-        const smallBalls_transform = Mat4.identity().times(Mat4.translation(player_transform[0][3], player_transform[1][3], 0))
-                                    .times(Mat4.scale(0.30, 0.30, 0.30));
-
-        const smallBalls_move = smallBalls_transform.map((x, i) =>
-            Vector.from(x).mix(Vector.from(player_transform[i]), 0.0005)
-        );
-        
-        this.shapes.cube.draw(
-            context,
-            program_state,
-            smallBalls_move,
-            this.materials.smallBalls
+            scoreBox,
+            this.materials.scoreBox
         );*/
+    }
 
 
-                /*// Calculate the fluctuating value between 0 and 1 using the sine function
+        /*// Calculate the fluctuating value between 0 and 1 using the sine function
         const fluctuatingValue = (1 + Math.sin(t * period)) / 2;
         const x = xMin + fluctuatingValue * (xMax - xMin);
         const y = yMin + fluctuatingValue * (yMax - yMin);
