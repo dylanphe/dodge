@@ -13,55 +13,6 @@ const defs = {};
 export {tiny, defs};
 
 
-const Text_Line = defs.Text_Line =
-    class Text_Line extends Shape {
-        // **Text_Line** A 2D line of text, drawn using square tiles for each glyph.
-        constructor(max_size) {
-            super("position", "normal", "texture_coord");
-            this.max_size = max_size;
-            this.update_count = 0;
-            this.arrays = {
-                position: {num_components: 3, values: []},
-                normal: {num_components: 3, values: []},
-                texture_coord: {num_components: 2, values: []}
-            };
-        }
-
-        set_string(context, line, color, size = 0.06, offset = 0.3, separation = 0.6) {
-            let p = -line.length / 2;
-            for (let ch of line) {
-                Text_Line.insert_glyph(this.arrays, ch, context, offset + separation * p++, size, color);
-            }
-            this.arrays.position.values = this.arrays.position.values.slice(0, 3 * line.length);
-            this.arrays.normal.values = this.arrays.normal.values.slice(0, 3 * line.length);
-            this.arrays.texture_coord.values = this.arrays.texture_coord.values.slice(0, 2 * line.length);
-            this.indices = this.indices.slice(0, 3 * line.length);
-            this.update_count = 0;
-        }
-
-        static insert_glyph(target, char, context, skip, size, color) {
-            const width = 33, height = 47, size_in_texture = 512;
-            const row = Math.floor(char.charCodeAt() / width), col = Math.floor(char.charCodeAt() % width);
-
-            for (let i = 0; i < 6; i++) {
-                const col_offset = i % 3, row_offset = Math.floor(i / 3), space = 1.5;
-
-                target.position.values.push((col * 1 / width + (col_offset + skip * space + 0.5) / size_in_texture) * size - size / 2);
-                target.position.values.push(((5 - row) * 1 / height + (row_offset + 0.5) / size_in_texture) * size - size / 2);
-                target.position.values.push(0);
-
-                target.normal.values.push(0);
-                target.normal.values.push(0);
-                target.normal.values.push(1);
-
-                target.texture_coord.values.push(col_offset);
-                target.texture_coord.values.push(row_offset);
-
-                target.indices = [0, 1, 2];
-            }
-        }
-    }
-
 const Triangle = defs.Triangle =
     class Triangle extends Shape {
         // **Triangle** The simplest possible 2D Shape – one triangle.  It stores 3 vertices, each
