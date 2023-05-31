@@ -58,11 +58,29 @@ export class Dodge extends Scene {
         this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.downPressed = true;});
         this.new_line();
         this.new_line();
+        this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
     }
-
+    startGame() {
+        // Reset game state
+        this.gameOver = false;
+        this.score = 0;
+        this.player_location = Mat4.identity();
+        this.target_location = Mat4.identity();
+        this.leftPressed = false;
+        this.rightPressed = false;
+        this.upPressed = false;
+        this.downPressed = false;
+        this.smallSquare_positions = [];
+        this.smallSquare_velocities = [];
+        this.smallSquare_num = 0;
+    }
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+        if (this.gameOver) {
+            // Game over logic here, such as displaying a game over message or score
+            return;
+        }
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
