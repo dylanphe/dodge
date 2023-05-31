@@ -14,11 +14,9 @@ export class Dodge extends Scene {
         this.timerInterval = null;
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
-        // TODO: Fix Text_Line in common.js to correct draw text
         this.shapes = {
             sphere4: new defs.Subdivision_Sphere(4),
             cube: new defs.Cube(),
-            score: new defs.Text_Line(20),
         };
 
         // *** Materials
@@ -28,7 +26,7 @@ export class Dodge extends Scene {
                 {ambient: .3, diffusivity: .5, color: hex_color("#0000FF")}),
             smallBalls: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
-            scoreBox: new Material(new defs.Phong_Shader(),
+            vleftRec: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FFFFFF")}),
 
         }
@@ -38,7 +36,7 @@ export class Dodge extends Scene {
         // Game State
         this.endTime = performance.now();
         clearInterval(this.timerInterval);
-        this.gameOver = false;
+        this.gameOver = true;
 
         // Player: Location and Interactivities
         this.score = 0;
@@ -48,6 +46,12 @@ export class Dodge extends Scene {
         this.rightPressed = false;
         this.upPressed = false;
         this.downPressed = false;
+
+        // Verticle Single Rec: Location
+        this.vleftRec_positions = [];
+        this.vrightRec_positions = [];
+        this.vleftRec_num = 0;
+        this.vrightRec_num = 0;
 
         // Small Squares: Location and Velocities
         this.smallSquare_positions = [];
@@ -81,9 +85,9 @@ export class Dodge extends Scene {
         this.new_line();
         this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
     }
+
     startGame() {
         // Reset game state
-
         this.startTime = performance.now();
         this.timerInterval = setInterval(() => {
             this.updateElapsedTime();
@@ -99,7 +103,14 @@ export class Dodge extends Scene {
         this.smallSquare_positions = [];
         this.smallSquare_velocities = [];
         this.smallSquare_num = 0;
+        this.vleftRec_positions = [];
+        this.vleftRec_target = [];
+        this.vleftRec_num = 0;
+        this.vrightRec_positions = [];
+        this.vrightRec_target = [];
+        this.vrightRec_num = 0;
     }
+
     endGame() {
         // Other game over logic
 
@@ -111,6 +122,7 @@ export class Dodge extends Scene {
         const timePlayedElement = document.getElementById("time-played");
         timePlayedElement.textContent = timePlayed.toFixed(2); // Display up to 2 decimal places
     }
+
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
@@ -205,38 +217,128 @@ export class Dodge extends Scene {
                 this.materials.player
             );
 
+            // TODO: ADD other obstacles
+            
+            // vRec Implementation
+            const recInterval = 10;
+            const rec_maxCnt = 1;
+            let recSpeed = 0.1;
+            let rec_t = t%recInterval;
+            let randSpawn = Math.floor(Math.random() * 2);
+
+            // vleftRec Spawning behaviors
+            if (rec_t >= (recInterval-0.02) && this.vleftRec_num < rec_maxCnt && randSpawn == 0) {
+                if (this.vrightRec_num == 0) {
+                    this.vleftRec_positions.push(Mat4.identity().times(Mat4.translation(-35,0,0))); // Initial position
+                    this.vleftRec_num += 1;
+                }
+            }
+
+            // vrightRec Spawning behaviors
+            if (rec_t >= (recInterval-0.02) && this.vrightRec_num < rec_maxCnt && randSpawn == 1) {
+                if (this.vleftRec_num == 0) {
+                    this.vrightRec_positions.push(Mat4.identity().times(Mat4.translation(35,0,0))); // Initial position
+                    this.vrightRec_num += 1;
+                }
+            }
+
+            // Collision Detection for Player with vleftRec
+            for (let j = 0; j < this.vleftRec_positions.length; j++) {
+                let vleftRecX = this.vleftRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                let vleftRecY = this.vleftRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+                // Calculate the leftmost and rightmost positions of the single rectangle
+                let vleftRecLeft = vleftRecX - 1.4;
+                let vleftRecRight = vleftRecX + 1.4;
+                // Calculate the topmost and bottommost positions of the single rectangle
+                const vleftRecTop = vleftRecY - 12;
+                const vleftRecBottom = vleftRecY + 12;
+                if (this.player_location[0][3] < vleftRecRight && this.player_location[0][3] > vleftRecLeft && this.player_location[1][3] >= vleftRecTop &&
+                    this.player_location[1][3] <= vleftRecBottom)
+                {
+                    this.gameOver = true;                        
+                }
+            }
+
+            // Collision Detection for Player with vrightRec
+            for (let j = 0; j < this.vrightRec_positions.length; j++) {
+                let vrightRecX = this.vrightRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                let vrightRecY = this.vrightRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+                // Calculate the leftmost and rightmost positions of the single rectangle
+                let vrightRecLeft = vrightRecX - 1.4;
+                let vrightRecRight = vrightRecX + 1.4;
+                // Calculate the topmost and bottommost positions of the single rectangle
+                const vrightRecTop = vrightRecY - 12;
+                const vrightRecBottom = vrightRecY + 12;
+                if (this.player_location[0][3] < vrightRecRight && this.player_location[0][3] > vrightRecLeft && this.player_location[1][3] >= vrightRecTop &&
+                    this.player_location[1][3] <= vrightRecBottom)
+                {
+                    this.gameOver = true;                        
+                }
+            }
+
+            // Draw vleftRec
+            for (let i = 0; i < this.vleftRec_positions.length; i++) {
+
+                this.vleftRec_positions[i][0][3] += recSpeed;
+                var vleftRec_transform = this.vleftRec_positions[i].times(Mat4.scale(1, 12, 1));
+                this.shapes.cube.draw(
+                    context,
+                    program_state,
+                    vleftRec_transform,
+                    this.materials.vleftRec
+                );
+                if (this.vleftRec_positions[i][0][3] > 35) {
+                    this.vleftRec_positions.splice(i, 1);
+                    this.vleftRec_num -= 1;
+                }
+            }
+            
+            // Draw vrightRec
+            for (let i = 0; i < this.vrightRec_positions.length; i++) {
+
+                this.vrightRec_positions[i][0][3] -= recSpeed;
+                var vrightRec_transform = this.vrightRec_positions[i].times(Mat4.scale(1, 12, 1));
+                this.shapes.cube.draw(
+                    context,
+                    program_state,
+                    vrightRec_transform,
+                    this.materials.vleftRec
+                );
+                if (this.vrightRec_positions[i][0][3] < -35) {
+                    this.vrightRec_positions.splice(i, 1);
+                    this.vrightRec_num -= 1;
+                }
+            }
+
             // Small Squares Implementation
+            const smallSquare_xPos = Math.random() < 0.5 ? 36 : -36;
+            const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
             let base_speedX = 0.1
             let base_speedY = 0.1
-            const xPos = Math.random() < 0.5 ? 36 : -36;
-            const yPos = Math.random() < 0.5 ? 19 : -19;
             const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
             const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
-            //const yVel = Math.random() * (0.2 - (-0.2)) + (-0.2);
-            const interval = 2;
-            const maxCnt = 5;
+            const smallSquare_interval = 2;
+            const smallSquare_maxCnt = 5;
 
             // Small Squares spawning behaviors
-            let spawnInterval = t%interval;
-            //console.log(spawnInterval);
-            if (spawnInterval >= (interval-0.02) && this.smallSquare_num < maxCnt) {
-                this.smallSquare_positions.push(Mat4.identity().times(Mat4.translation(xPos,yPos,0))); // Initial position
+            let smallSquare_t = t%smallSquare_interval;
+            if (smallSquare_t >= (smallSquare_interval-0.02) && this.smallSquare_num < smallSquare_maxCnt) {
+                this.smallSquare_positions.push(Mat4.identity().times(Mat4.translation(smallSquare_xPos,smallSquare_yPos,0))); // Initial position
                 this.smallSquare_velocities.push(vec4(xVel, yVel, 0, 0)); // Initial velocity
                 this.smallSquare_num += 1;
             }
             
             // Small Square Movements
             for (let i = 0; i < this.smallSquare_positions.length; i++) {
-                let distFromPlayer = Math.sqrt(Math.pow(this.smallSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[i][1][3] - this.player_location[1][3], 2));
-                //let squareAngle = Math.tan(Math.abs(this.smallSquare_positions[1][3] - this.player_location[1][3])/Math.abs(this.smallSquare_positions[0][3] - this.player_location[0][3]));
+                let smallSquare_dist = Math.sqrt(Math.pow(this.smallSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[i][1][3] - this.player_location[1][3], 2));
                 
-                // Collision Detection for Player
-                if (distFromPlayer > 0 && distFromPlayer < 1.4) {
+                // Collision Detection for Player with Small Squares
+                if (smallSquare_dist > 0 && smallSquare_dist < 1.4) {
                     this.gameOver = true;
                 } else {
                     // Follow the player if it is within a certain radius
                     let orbitRadius = 5
-                    if (distFromPlayer > orbitRadius && distFromPlayer < 12) {
+                    if (smallSquare_dist > orbitRadius && smallSquare_dist < 12) {
                         // If it is to the right of the player
                         if (this.smallSquare_positions[i][0][3] >= this.player_location[0][3] + orbitRadius && this.smallSquare_velocities[i][0] > 0) {
                             this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
@@ -260,6 +362,44 @@ export class Dodge extends Scene {
                     }
                     if (this.smallSquare_positions[i][1][3] + 0.125 >= yMax || this.smallSquare_positions[i][1][3] - 0.125 <= yMin) {
                         this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
+                    }
+
+                    // Bounce-Off-vleftRec bahaviors
+                    for (let j = 0; j < this.vleftRec_positions.length; j++) {
+                        let vleftRecX = this.vleftRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                        let vleftRecY = this.vleftRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+
+                        // Calculate the leftmost and rightmost positions of the single rectangle
+                        let vleftRecLeft = vleftRecX - 1;
+                        let vleftRecRight = vleftRecX + 1;
+                        // Calculate the topmost and bottommost positions of the single rectangle
+                        const vleftRecTop = vleftRecY - 12;
+                        const vleftRecBottom = vleftRecY + 12;
+                        if (this.smallSquare_positions[i][0][3] < vleftRecRight && this.smallSquare_positions[i][0][3] > vleftRecLeft && this.smallSquare_positions[i][1][3] >= vleftRecTop &&
+                            this.smallSquare_positions[i][1][3] <= vleftRecBottom)
+                        {
+                            this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
+                            this.smallSquare_positions[i][0][3] += 4*this.smallSquare_velocities[i][0];
+                        }
+                    }
+
+                    // Bounce-Off-vleftRec bahaviors
+                    for (let j = 0; j < this.vrightRec_positions.length; j++) {
+                        let vrightRecX = this.vrightRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                        let vrightRecY = this.vrightRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+
+                        // Calculate the leftmost and rightmost positions of the single rectangle
+                        let vrightRecLeft = vrightRecX - 1;
+                        let vrightRecRight = vrightRecX + 1;
+                        // Calculate the topmost and bottommost positions of the single rectangle
+                        const vrightRecTop = vrightRecY - 12;
+                        const vrightRecBottom = vrightRecY + 12;
+                        if (this.smallSquare_positions[i][0][3] < vrightRecRight && this.smallSquare_positions[i][0][3] > vrightRecLeft && this.smallSquare_positions[i][1][3] >= vrightRecTop &&
+                            this.smallSquare_positions[i][1][3] <= vrightRecBottom)
+                        {
+                            this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
+                            this.smallSquare_positions[i][0][3] += 4*this.smallSquare_velocities[i][0];
+                        }
                     }
 
                     // Drive Behaviors
@@ -308,43 +448,7 @@ export class Dodge extends Scene {
                     this.materials.smallBalls
                 );
             }
-
-
-            // TODO: ADD Other obstacles
-
-            // Display score
-            let score_text = "Score: " + this.score;
-            this.shapes.score.set_string(context, score_text, color(1, 1, 1, 1), 0.5);
-            var scoreBox = Mat4.identity().times(Mat4.translation(-35,19,0));
-            this.shapes.score.draw(
-                context,
-                program_state,
-                scoreBox,
-                this.materials.scoreBox
-            );
-
-
-    }
-    // GAME OVER
-    else {
-        /*var scoreBox = Mat4.identity().times(Mat4.translation(-35,19,0));
-        this.shapes.cube.draw(
-            context,
-            program_state,
-            scoreBox,
-            this.materials.scoreBox
-        );*/
-    }
-
-
-        /*// Calculate the fluctuating value between 0 and 1 using the sine function
-        const fluctuatingValue = (1 + Math.sin(t * period)) / 2;
-        const x = xMin + fluctuatingValue * (xMax - xMin);
-        const y = yMin + fluctuatingValue * (yMax - yMin);
-
-        // Apply the transformation to the ball
-        let smallBalls_transform = Mat4.identity().times(Mat4.translation(x, y, ballPosition[2]))
-                                    .times(Mat4.scale(0.5, 0.5, 0.5));*/
+        }
 
     }
 }
