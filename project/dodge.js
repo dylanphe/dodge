@@ -8,6 +8,10 @@ export class Dodge extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
+        this.startTime = null;
+        this.endTime = null;
+        this.elapsedTime = 0;
+        this.timerInterval = null;
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         // TODO: Fix Text_Line in common.js to correct draw text
@@ -32,6 +36,8 @@ export class Dodge extends Scene {
         this.initial_camera_location = Mat4.look_at(vec3(0, 0, 50), vec3(0, 0, 0), vec3(0, 1, 0));
 
         // Game State
+        this.endTime = performance.now();
+        clearInterval(this.timerInterval);
         this.gameOver = false;
 
         // Player: Location and Interactivities
@@ -48,7 +54,22 @@ export class Dodge extends Scene {
         this.smallSquare_velocities = [];
         this.smallSquare_num = 0;
     }
+    updateElapsedTime() {
+        this.elapsedTime = performance.now() - this.startTime;
+    }
+    formatTime(time) {
+        const minutes = Math.floor(time / 60000);
+        const seconds = Math.floor((time % 60000) / 1000);
+        const milliseconds = Math.floor((time % 1000) / 10);
 
+        return (
+            minutes.toString().padStart(2, "0") +
+            ":" +
+            seconds.toString().padStart(2, "0") +
+            "." +
+            milliseconds.toString().padStart(2, "0")
+        );
+    }
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.leftPressed = true;});
@@ -62,6 +83,11 @@ export class Dodge extends Scene {
     }
     startGame() {
         // Reset game state
+
+        this.startTime = performance.now();
+        this.timerInterval = setInterval(() => {
+            this.updateElapsedTime();
+        }, 10);
         this.gameOver = false;
         this.score = 0;
         this.player_location = Mat4.identity();
@@ -74,13 +100,52 @@ export class Dodge extends Scene {
         this.smallSquare_velocities = [];
         this.smallSquare_num = 0;
     }
+    endGame() {
+        // Other game over logic
+
+        // Stop the stopwatch
+        this.endTime = performance.now();
+        const timePlayed = (this.endTime - this.startTime) / 1000; // Convert to seconds
+
+        // Display the time played in the modal
+        const timePlayedElement = document.getElementById("time-played");
+        timePlayedElement.textContent = timePlayed.toFixed(2); // Display up to 2 decimal places
+    }
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
         if (this.gameOver) {
             // Game over logic here, such as displaying a game over message or score
+            const modal = document.getElementById("game-over-modal");
+            const finalScore = document.getElementById("final-score");
+            const timePlayedElement = document.getElementById("time-played");
+
+            // Update the final score text
+            finalScore.textContent = this.score;
+
+            // Calculate the time played
+            const timePlayed = this.elapsedTime;
+
+            // Display the formatted time played in the modal
+            timePlayedElement.textContent = this.formatTime(timePlayed);
+
+            // Show the game over modal
+            modal.style.display = "block";
+
+            // Play again button event listener
+            const playAgainButton = document.getElementById("play-again-button");
+            playAgainButton.addEventListener("click", () => {
+                // Reset the game and hide the game over modal
+                this.startGame();
+                modal.style.display = "none";
+            });
+
+            // Stop the stopwatch
+            clearInterval(this.timerInterval);
+
             return;
         }
+
         if (!context.scratchpad.controls) {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
             // Define the global camera and projection matrices, which are stored in program_state.
@@ -259,7 +324,7 @@ export class Dodge extends Scene {
             );
 
 
-    } 
+    }
     // GAME OVER
     else {
         /*var scoreBox = Mat4.identity().times(Mat4.translation(-35,19,0));
