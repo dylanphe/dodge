@@ -1,8 +1,10 @@
 import {defs, tiny} from './examples/common.js';
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
+
+const {Textured_Phong} = defs
 
 export class Dodge extends Scene {
     constructor() {
@@ -17,7 +19,14 @@ export class Dodge extends Scene {
         this.shapes = {
             sphere4: new defs.Subdivision_Sphere(4),
             cube: new defs.Cube(),
+            land: new defs.Square(),
+            sky: new defs.Square(),
+            brick: new defs.Cube(),
+            plane: new defs.Square(),
         };
+
+        this.shapes.land.arrays.texture_coord = this.shapes.land.arrays.texture_coord.map(vec2 => [vec2[0] * 10, vec2[1]]);
+        this.shapes.brick.arrays.texture_coord = this.shapes.brick.arrays.texture_coord.map(vec2 => [vec2[0] * 1, vec2[1]*10]);
 
         // *** Materials
         // TODO: ADD Texture
@@ -28,6 +37,26 @@ export class Dodge extends Scene {
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
             vleftRec: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FFFFFF")}),
+            land: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/grass.png"),
+            }),
+            sky: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/sky.png"),
+            }),
+            brick: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/brick.png", "NEAREST"),
+            }),
+            plane: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/plane.gif", "LINEAR_MIPMAP_LINEAR"),
+            }),
 
         }
 
@@ -166,9 +195,9 @@ export class Dodge extends Scene {
         program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, .1, 1000);
         const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
         // The parameters of the Light are: position, color, size
-        const light_position = vec4(0, 5, 5, 1);
+        const light_position = vec4(0, 5, 0, 1);
         // The parameters of the Light are: position, color, size
-        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
+        program_state.lights = [new Light(light_position, color(1, 0.8, 0.2, 1), 1000)];
 
         // screen size
         // TODO: ADD BACKGROUND
@@ -220,7 +249,7 @@ export class Dodge extends Scene {
             // TODO: ADD other obstacles
             
             // vRec Implementation
-            const recInterval = 10;
+            const recInterval = 2;
             const rec_maxCnt = 1;
             let recSpeed = 0.1;
             let rec_t = t%recInterval;
@@ -281,11 +310,11 @@ export class Dodge extends Scene {
 
                 this.vleftRec_positions[i][0][3] += recSpeed;
                 var vleftRec_transform = this.vleftRec_positions[i].times(Mat4.scale(1, 12, 1));
-                this.shapes.cube.draw(
+                this.shapes.brick.draw(
                     context,
                     program_state,
                     vleftRec_transform,
-                    this.materials.vleftRec
+                    this.materials.brick
                 );
                 if (this.vleftRec_positions[i][0][3] > 35) {
                     this.vleftRec_positions.splice(i, 1);
@@ -298,11 +327,11 @@ export class Dodge extends Scene {
 
                 this.vrightRec_positions[i][0][3] -= recSpeed;
                 var vrightRec_transform = this.vrightRec_positions[i].times(Mat4.scale(1, 12, 1));
-                this.shapes.cube.draw(
+                this.shapes.brick.draw(
                     context,
                     program_state,
                     vrightRec_transform,
-                    this.materials.vleftRec
+                    this.materials.brick
                 );
                 if (this.vrightRec_positions[i][0][3] < -35) {
                     this.vrightRec_positions.splice(i, 1);
@@ -313,8 +342,8 @@ export class Dodge extends Scene {
             // Small Squares Implementation
             const smallSquare_xPos = Math.random() < 0.5 ? 36 : -36;
             const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
-            let base_speedX = 0.03
-            let base_speedY = 0.03
+            let base_speedX = 0.1
+            let base_speedY = 0.1
             const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
             const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
             const smallSquare_interval = 2;
@@ -334,7 +363,7 @@ export class Dodge extends Scene {
                 
                 // Collision Detection for Player with Small Squares
                 if (smallSquare_dist > 0 && smallSquare_dist < 1.4) {
-                    this.gameOver = true;
+                    this.gameOver = false;
                 } else {
                     // Follow the player if it is within a certain radius
                     let orbitRadius = 5
@@ -383,7 +412,7 @@ export class Dodge extends Scene {
                         }
                     }
 
-                    // Bounce-Off-vleftRec bahaviors
+                    // Bounce-Off-vrightRec bahaviors
                     for (let j = 0; j < this.vrightRec_positions.length; j++) {
                         let vrightRecX = this.vrightRec_positions[j][0][3];  // X-coordinate of vleftRec center
                         let vrightRecY = this.vrightRec_positions[j][1][3];  // Y-coordinate of vleftRec center
@@ -448,10 +477,81 @@ export class Dodge extends Scene {
                     this.materials.smallBalls
                 );
             }
+
+            // Draw background
+            var land_transform = Mat4.identity().times(Mat4.translation(0, -25,-20))
+                                                    .times(Mat4.scale(52.5, 4, 1));
+            this.shapes.land.draw(
+                context,
+                program_state,
+                land_transform,
+                this.materials.land
+            );
+
+            var sky_transform = Mat4.identity().times(Mat4.translation(0, 4,-20))
+                                                .times(Mat4.scale(52.5, 25, 1));
+            this.shapes.sky.draw(
+                context,
+                program_state,
+                sky_transform,
+                this.materials.sky
+            );
+
+            // Calculate the x position based on time
+            const x_position = (t % 10) / 10; // Range from 0 to 1 over 8 seconds
+
+            // Calculate the y position based on time
+            const y_position = Math.sin(t * Math.PI); // Oscillate between -1 and 1 over time
+
+            // Calculate the scale based on time
+            const scale = 5 - Math.abs(Math.sin(t * Math.PI)); // Oscillate between 4 and 6 over time
+
+            // Create the plane_transform matrix
+            const plane_transform = Mat4.identity()
+            .times(Mat4.translation(39 - x_position * 90 , 20 - y_position*1, -10))
+            .times(Mat4.scale(4, 4, 1));
+
+            this.shapes.sky.draw(
+                context,
+                program_state,
+                plane_transform,
+                this.materials.plane
+            );
         }
 
     }
 }
+
+class Texture_dup extends Textured_Phong {
+    // Override the fragment_glsl_code() method to modify the shader
+    fragment_glsl_code() {
+        return this.shared_glsl_code() + `
+        varying vec2 f_tex_coord;
+        uniform sampler2D texture;
+        uniform float animation_time;
+        
+        void main(){
+            // Limit animation_time to within the range of [0,1]
+            vec2 slide = vec2(f_tex_coord - vec2(2. * mod(animation_time, 1.), 0.0));
+            
+            // Sample the texture image in the correct place.
+            vec4 tex_color = texture2D(texture, slide);  
+            
+            // Limit the slide_tex_coordinate to within the range of [0,1]
+            float slideX = mod(slide.x, 1.0);
+            float slideY = mod(slide.y, 1.0);
+
+            if( tex_color.w < .01 ) discard;
+            // Compute an initial (ambient) color:
+            gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w ); 
+            // Compute the final color with contributions from lights.
+            gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );                  
+
+            }
+        `;
+    }
+}
+
 
 /*class Gouraud_Shader extends Shader {
     // This is a Shader using Phong_Shader as template
