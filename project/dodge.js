@@ -182,22 +182,22 @@ export class Dodge extends Scene {
             // Interactivities functions
             if (this.leftPressed) {
                 if (this.target_location[0][3] > xMin) {
-                    this.target_location = this.target_location.times(Mat4.translation(-0.75,0,0));
+                    this.target_location = this.target_location.times(Mat4.translation(-1.00,0,0));
                 }
                 this.leftPressed = false;
             } if (this.rightPressed) {
                 if (this.target_location[0][3] < xMax) {
-                    this.target_location = this.target_location.times(Mat4.translation(0.75,0,0));
+                    this.target_location = this.target_location.times(Mat4.translation(1.00,0,0));
                 }
                 this.rightPressed = false;
             } if (this.upPressed) {
                 if (this.target_location[1][3] < yMax) {
-                    this.target_location = this.target_location.times(Mat4.translation(0,0.75,0));
+                    this.target_location = this.target_location.times(Mat4.translation(0,1.00,0));
                 }
                 this.upPressed = false;
             } if (this.downPressed) {
                 if (this.target_location[1][3] > yMin) {
-                    this.target_location = this.target_location.times(Mat4.translation(0,-0.75,0));
+                    this.target_location = this.target_location.times(Mat4.translation(0,-1.00,0));
                 }
                 this.downPressed = false;
             }
@@ -313,8 +313,8 @@ export class Dodge extends Scene {
             // Small Squares Implementation
             const smallSquare_xPos = Math.random() < 0.5 ? 36 : -36;
             const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
-            let base_speedX = 0.1
-            let base_speedY = 0.1
+            let base_speedX = 0.03
+            let base_speedY = 0.03
             const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
             const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
             const smallSquare_interval = 2;
