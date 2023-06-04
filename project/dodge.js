@@ -22,17 +22,21 @@ export class Dodge extends Scene {
             land: new defs.Square(),
             sky: new defs.Square(),
             brick: new defs.Cube(),
-            plane: new defs.Square(),
+            cloud: new defs.Square(),
         };
 
         this.shapes.land.arrays.texture_coord = this.shapes.land.arrays.texture_coord.map(vec2 => [vec2[0] * 10, vec2[1]]);
-        this.shapes.brick.arrays.texture_coord = this.shapes.brick.arrays.texture_coord.map(vec2 => [vec2[0] * 1, vec2[1]*10]);
+        this.shapes.brick.arrays.texture_coord = this.shapes.brick.arrays.texture_coord.map(vec2 => [vec2[0], vec2[1]*10]);
+        this.shapes.sphere4.arrays.texture_coord = this.shapes.sphere4.arrays.texture_coord.map(vec2 => [vec2[0], vec2[1]]);
 
         // *** Materials
         // TODO: ADD Texture
         this.materials = {
-            player: new Material(new defs.Phong_Shader(),
-                {ambient: .3, diffusivity: .5, color: hex_color("#0000FF")}),
+            player: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 1, specularity: .2,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/ball.jpg"),
+            }),
             smallBalls: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
             vleftRec: new Material(new defs.Phong_Shader(),
@@ -40,7 +44,7 @@ export class Dodge extends Scene {
             land: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/grass.png"),
+                texture: new Texture("/assets/land.jpg"),
             }),
             sky: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
@@ -52,10 +56,10 @@ export class Dodge extends Scene {
                 color: hex_color("#000000"),
                 texture: new Texture("/assets/brick.png", "NEAREST"),
             }),
-            plane: new Material(new Textured_Phong(), {
+            cloud: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/plane.gif", "LINEAR_MIPMAP_LINEAR"),
+                texture: new Texture("/assets/cloud.png", "LINEAR_MIPMAP_LINEAR"),
             }),
 
         }
@@ -249,14 +253,14 @@ export class Dodge extends Scene {
             // TODO: ADD other obstacles
             
             // vRec Implementation
-            const recInterval = 2;
+            const recInterval = 10;
             const rec_maxCnt = 1;
             let recSpeed = 0.1;
             let rec_t = t%recInterval;
             let randSpawn = Math.floor(Math.random() * 2);
 
             // vleftRec Spawning behaviors
-            if (rec_t >= (recInterval-0.02) && this.vleftRec_num < rec_maxCnt && randSpawn == 0) {
+            if (rec_t >= (recInterval-0.02) && this.vleftRec_num < rec_maxCnt && randSpawn == 0 && this.score >= 6) {
                 if (this.vrightRec_num == 0) {
                     this.vleftRec_positions.push(Mat4.identity().times(Mat4.translation(-35,0,0))); // Initial position
                     this.vleftRec_num += 1;
@@ -264,7 +268,7 @@ export class Dodge extends Scene {
             }
 
             // vrightRec Spawning behaviors
-            if (rec_t >= (recInterval-0.02) && this.vrightRec_num < rec_maxCnt && randSpawn == 1) {
+            if (rec_t >= (recInterval-0.02) && this.vrightRec_num < rec_maxCnt && randSpawn == 1 && this.score >= 10) {
                 if (this.vleftRec_num == 0) {
                     this.vrightRec_positions.push(Mat4.identity().times(Mat4.translation(35,0,0))); // Initial position
                     this.vrightRec_num += 1;
@@ -344,11 +348,17 @@ export class Dodge extends Scene {
             const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
             let base_speedX = 0.1
             let base_speedY = 0.1
+            if (this.score >= 16) {
+                base_speedX = 0.15
+                base_speedY = 0.15
+            }
             const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
             const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
             const smallSquare_interval = 2;
-            const smallSquare_maxCnt = 5;
-
+            let smallSquare_maxCnt = 5;
+            if (this.score >= 20) {
+                smallSquare_maxCnt = 7
+            }
             // Small Squares spawning behaviors
             let smallSquare_t = t%smallSquare_interval;
             if (smallSquare_t >= (smallSquare_interval-0.02) && this.smallSquare_num < smallSquare_maxCnt) {
@@ -363,25 +373,31 @@ export class Dodge extends Scene {
                 
                 // Collision Detection for Player with Small Squares
                 if (smallSquare_dist > 0 && smallSquare_dist < 1.4) {
-                    this.gameOver = false;
+                    this.gameOver = true;
                 } else {
                     // Follow the player if it is within a certain radius
-                    let orbitRadius = 5
-                    if (smallSquare_dist > orbitRadius && smallSquare_dist < 12) {
+                    let orbitinnerRadius = 5
+                    let orbitoutterRadius = 12
+                    if (this.score >= 16) {
+                        orbitinnerRadius = 7
+                        orbitoutterRadius = 12
+
+                    }
+                    if (smallSquare_dist > orbitinnerRadius && smallSquare_dist < orbitoutterRadius) {
                         // If it is to the right of the player
-                        if (this.smallSquare_positions[i][0][3] >= this.player_location[0][3] + orbitRadius && this.smallSquare_velocities[i][0] > 0) {
+                        if (this.smallSquare_positions[i][0][3] >= this.player_location[0][3] + orbitinnerRadius && this.smallSquare_velocities[i][0] > 0) {
                             this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
                         } 
                         // If it is to the left of the player
-                        else if (this.smallSquare_positions[i][0][3] < this.player_location[0][3] - orbitRadius && this.smallSquare_velocities[i][0] < 0) {
+                        else if (this.smallSquare_positions[i][0][3] < this.player_location[0][3] - orbitinnerRadius && this.smallSquare_velocities[i][0] < 0) {
                             this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
                         }
                         // If it is above of the player
-                        if (this.smallSquare_positions[i][1][3] > this.player_location[1][3] + orbitRadius-2.5 && this.smallSquare_velocities[i][1] > 0) {
+                        if (this.smallSquare_positions[i][1][3] > this.player_location[1][3] + orbitinnerRadius-2.5 && this.smallSquare_velocities[i][1] > 0) {
                             this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
                         }
                         // If it is below of the player
-                        else if (this.smallSquare_positions[i][1][3] < this.player_location[1][3] - orbitRadius-2.5 && this.smallSquare_velocities[i][1] < 0) {
+                        else if (this.smallSquare_positions[i][1][3] < this.player_location[1][3] - orbitinnerRadius-2.5 && this.smallSquare_velocities[i][1] < 0) {
                             this.smallSquare_velocities[i][1] = -this.smallSquare_velocities[i][1];
                         }
                     }
@@ -427,7 +443,12 @@ export class Dodge extends Scene {
                             this.smallSquare_positions[i][1][3] <= vrightRecBottom)
                         {
                             this.smallSquare_velocities[i][0] = -this.smallSquare_velocities[i][0];
-                            this.smallSquare_positions[i][0][3] += 4*this.smallSquare_velocities[i][0];
+                            if (this.score >= 16) {
+                                this.smallSquare_positions[i][0][3] += 2*this.smallSquare_velocities[i][0];
+        
+                            } else {
+                                this.smallSquare_positions[i][0][3] += 4*this.smallSquare_velocities[i][0];
+                            }
                         }
                     }
 
@@ -460,7 +481,7 @@ export class Dodge extends Scene {
                         this.smallSquare_positions.splice(i, 1);
                         this.smallSquare_velocities.splice(i, 1);
                         this.smallSquare_num -= 2;
-                        this.score += 1;
+                        this.score += 2;
                         }
 
                     }
@@ -498,24 +519,32 @@ export class Dodge extends Scene {
             );
 
             // Calculate the x position based on time
-            const x_position = (t % 10) / 10; // Range from 0 to 1 over 8 seconds
-
-            // Calculate the y position based on time
-            const y_position = Math.sin(t * Math.PI); // Oscillate between -1 and 1 over time
-
-            // Calculate the scale based on time
-            const scale = 5 - Math.abs(Math.sin(t * Math.PI)); // Oscillate between 4 and 6 over time
+            //const x_position = (t % 10) / 10; // Range from 0 to 1 over 8 seconds
+            const x_position = Math.sin(t * Math.PI);
 
             // Create the plane_transform matrix
-            const plane_transform = Mat4.identity()
-            .times(Mat4.translation(39 - x_position * 90 , 20 - y_position*1, -10))
-            .times(Mat4.scale(4, 4, 1));
+            const cloud1_transform = Mat4.identity()
+            .times(Mat4.translation(29 - x_position * 1, 20, -10))
+            .times(Mat4.scale(7, 7, 1));
 
-            this.shapes.sky.draw(
+            // Create the plane_transform matrix
+            const cloud2_transform = Mat4.identity()
+            .times(Mat4.translation(-28 - x_position * 1, 18, -10))
+            .times(Mat4.scale(7, 7, 1))
+            .times(Mat4.scale(-1, 1, 1));
+
+            this.shapes.cloud.draw(
                 context,
                 program_state,
-                plane_transform,
-                this.materials.plane
+                cloud1_transform,
+                this.materials.cloud
+            );
+
+            this.shapes.cloud.draw(
+                context,
+                program_state,
+                cloud2_transform,
+                this.materials.cloud
             );
         }
 
