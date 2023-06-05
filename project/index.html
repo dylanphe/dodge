@@ -4,8 +4,33 @@
     <meta charset="UTF-8"/>
     <link href="assets/icon.png" rel="icon">
     <title>Dodge</title>
+    <style>
+        .start-screen {
+            background-image: url("assets/dodgeking.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+
 </head>
 <body style="background: White">
+<div class="start-screen">
+    <h1>Press ENTER To Start</h1>
+</div>
 <div id="game-over-modal" class="modal">
     <div class="modal-content">
         <h2>Dodge King!(Dodge Blocks! Stay Alive!!! )</h2>
@@ -20,6 +45,12 @@
 <div class="canvas-widget" id="main-canvas"></div>
 <canvas id="canvas" width="1280" height="980"></canvas>
 <script type=module>
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            var startScreen = document.querySelector(".start-screen");
+            startScreen.classList.add("hidden");
+        }
+    });
     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE *********************
     // Indicate which element on the page you want the Canvas_Widget to replace with a 3D WebGL area:
     const element_to_replace = document.querySelector("#main-canvas");
