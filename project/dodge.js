@@ -132,28 +132,30 @@ export class Dodge extends Scene {
 
     startGame() {
         // Reset game state
-        this.startTime = performance.now();
-        this.timerInterval = setInterval(() => {
-            this.updateElapsedTime();
-        }, 10);
-        this.gameOver = false;
-        this.score = 0;
-        this.player_location = Mat4.identity();
-        this.target_location = Mat4.identity();
-        this.leftPressed = false;
-        this.rightPressed = false;
-        this.upPressed = false;
-        this.downPressed = false;
-        this.smallSquare_positions = [];
-        this.smallSquare_velocities = [];
-        this.smallSquare_num = 0;
-        this.vleftRec_positions = [];
-        this.vleftRec_target = [];
-        this.vleftRec_num = 0;
-        this.vrightRec_positions = [];
-        this.vrightRec_target = [];
-        this.vrightRec_num = 0;
-        this.start = false;
+        if (this.gameOver == true) {
+            this.startTime = performance.now();
+            this.timerInterval = setInterval(() => {
+                this.updateElapsedTime();
+            }, 10);
+            this.gameOver = false;
+            this.score = 0;
+            this.player_location = Mat4.identity();
+            this.target_location = Mat4.identity();
+            this.leftPressed = false;
+            this.rightPressed = false;
+            this.upPressed = false;
+            this.downPressed = false;
+            this.smallSquare_positions = [];
+            this.smallSquare_velocities = [];
+            this.smallSquare_num = 0;
+            this.vleftRec_positions = [];
+            this.vleftRec_target = [];
+            this.vleftRec_num = 0;
+            this.vrightRec_positions = [];
+            this.vrightRec_target = [];
+            this.vrightRec_num = 0;
+            this.start = false;
+        }
     }
 
     endGame() {
