@@ -23,6 +23,7 @@ export class Dodge extends Scene {
             sky: new defs.Square(),
             brick: new defs.Cube(),
             cloud: new defs.Square(),
+            gameover: new defs.Square(),
         };
 
         this.shapes.land.arrays.texture_coord = this.shapes.land.arrays.texture_coord.map(vec2 => [vec2[0] * 10, vec2[1]]);
@@ -30,7 +31,6 @@ export class Dodge extends Scene {
         this.shapes.sphere4.arrays.texture_coord = this.shapes.sphere4.arrays.texture_coord.map(vec2 => [vec2[0], vec2[1]]);
 
         // *** Materials
-        // TODO: ADD Texture
         this.materials = {
             player: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 1, specularity: .2,
@@ -61,6 +61,16 @@ export class Dodge extends Scene {
                 color: hex_color("#000000"),
                 texture: new Texture("/assets/cloud.png", "LINEAR_MIPMAP_LINEAR"),
             }),
+            gameover: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/gv.png"),
+            }),
+            gamestart: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 0.1, specularity: 0.1,
+                color: hex_color("#000000"),
+                texture: new Texture("/assets/gs.png"),
+            }),
 
         }
 
@@ -70,6 +80,7 @@ export class Dodge extends Scene {
         this.endTime = performance.now();
         clearInterval(this.timerInterval);
         this.gameOver = true;
+        this.start = true;
 
         // Player: Location and Interactivities
         this.score = 0;
@@ -142,6 +153,7 @@ export class Dodge extends Scene {
         this.vrightRec_positions = [];
         this.vrightRec_target = [];
         this.vrightRec_num = 0;
+        this.start = false;
     }
 
     endGame() {
@@ -159,6 +171,20 @@ export class Dodge extends Scene {
     display(context, program_state) {
         // display():  Called once per frame of animation.
         // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+
+        if (!context.scratchpad.controls) {
+            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+            // Define the global camera and projection matrices, which are stored in program_state.
+            program_state.set_camera(this.initial_camera_location);
+        }
+        program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, .1, 1000);
+        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        // The parameters of the Light are: position, color, size
+        const light_position = vec4(0, 5, 0, 1);
+        // The parameters of the Light are: position, color, size
+        program_state.lights = [new Light(light_position, color(1, 0.8, 0.2, 1), 1000)];
+
+
         if (this.gameOver) {
             // Game over logic here, such as displaying a game over message or score
             const modal = document.getElementById("game-over-modal");
@@ -182,29 +208,84 @@ export class Dodge extends Scene {
             playAgainButton.addEventListener("click", () => {
                 // Reset the game and hide the game over modal
                 this.startGame();
+                this.start = false;
                 modal.style.display = "none";
             });
 
+            // Draw background
+            var land_transform = Mat4.identity().times(Mat4.translation(0, -25,-20))
+            .times(Mat4.scale(52.5, 4, 1));
+            this.shapes.land.draw(
+                context,
+                program_state,
+                land_transform,
+                this.materials.land
+            );
+
+            var sky_transform = Mat4.identity().times(Mat4.translation(0, 4,-20))
+                    .times(Mat4.scale(52.5, 25, 1));
+            this.shapes.sky.draw(
+                context,
+                program_state,
+                sky_transform,
+                this.materials.sky
+            );
+
+            // Calculate the x position based on time
+            //const x_position = (t % 10) / 10; // Range from 0 to 1 over 8 seconds
+            const x_position = Math.sin(t * Math.PI);
+
+            // Create the plane_transform matrix
+            const cloud1_transform = Mat4.identity()
+            .times(Mat4.translation(29 - x_position * 1, 20, -10))
+            .times(Mat4.scale(7, 7, 1));
+
+            // Create the plane_transform matrix
+            const cloud2_transform = Mat4.identity()
+            .times(Mat4.translation(-28 - x_position * 1, 18, -10))
+            .times(Mat4.scale(7, 7, 1))
+            .times(Mat4.scale(-1, 1, 1));
+
+            this.shapes.cloud.draw(
+                context,
+                program_state,
+                cloud1_transform,
+                this.materials.cloud
+            );
+
+            this.shapes.cloud.draw(
+                context,
+                program_state,
+                cloud2_transform,
+                this.materials.cloud
+            );
+
+            var gameover_transform = Mat4.identity().times(Mat4.translation(0, 0,-10))
+                                                        .times(Mat4.scale(25, 25, 1));
+            
+            if (this.start == false ) {
+                this.shapes.sky.draw(
+                    context,
+                    program_state,
+                    gameover_transform,
+                    this.materials.gameover
+                );
+            } else {
+                this.shapes.sky.draw(
+                    context,
+                    program_state,
+                    gameover_transform,
+                    this.materials.gamestart
+                );
+            }
+            
             // Stop the stopwatch
             clearInterval(this.timerInterval);
 
             return;
         }
 
-        if (!context.scratchpad.controls) {
-            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
-            // Define the global camera and projection matrices, which are stored in program_state.
-            program_state.set_camera(this.initial_camera_location);
-        }
-        program_state.projection_transform = Mat4.perspective(Math.PI / 4, context.width / context.height, .1, 1000);
-        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
-        // The parameters of the Light are: position, color, size
-        const light_position = vec4(0, 5, 0, 1);
-        // The parameters of the Light are: position, color, size
-        program_state.lights = [new Light(light_position, color(1, 0.8, 0.2, 1), 1000)];
-
         // screen size
-        // TODO: ADD BACKGROUND
         const xMin = -36.5;
         const xMax = 36.5;
         const yMin = -20;
@@ -288,7 +369,8 @@ export class Dodge extends Scene {
                 if (this.player_location[0][3] < vleftRecRight && this.player_location[0][3] > vleftRecLeft && this.player_location[1][3] >= vleftRecTop &&
                     this.player_location[1][3] <= vleftRecBottom)
                 {
-                    this.gameOver = true;                        
+                    this.gameOver = true;
+                    this.start = false;                     
                 }
             }
 
@@ -305,7 +387,8 @@ export class Dodge extends Scene {
                 if (this.player_location[0][3] < vrightRecRight && this.player_location[0][3] > vrightRecLeft && this.player_location[1][3] >= vrightRecTop &&
                     this.player_location[1][3] <= vrightRecBottom)
                 {
-                    this.gameOver = true;                        
+                    this.gameOver = true;
+                    this.start = false;                        
                 }
             }
 
@@ -374,6 +457,7 @@ export class Dodge extends Scene {
                 // Collision Detection for Player with Small Squares
                 if (smallSquare_dist > 0 && smallSquare_dist < 1.4) {
                     this.gameOver = true;
+                    this.start = false;
                 } else {
                     // Follow the player if it is within a certain radius
                     let orbitinnerRadius = 5
