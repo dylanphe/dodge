@@ -299,22 +299,22 @@ export class Dodge extends Scene {
             // Interactivities functions
             if (this.leftPressed) {
                 if (this.target_location[0][3] > xMin) {
-                    this.target_location = this.target_location.times(Mat4.translation(-1.00,0,0));
+                    this.target_location = this.target_location.times(Mat4.translation(-2.00,0,0));
                 }
                 this.leftPressed = false;
             } if (this.rightPressed) {
                 if (this.target_location[0][3] < xMax) {
-                    this.target_location = this.target_location.times(Mat4.translation(1.00,0,0));
+                    this.target_location = this.target_location.times(Mat4.translation(2.00,0,0));
                 }
                 this.rightPressed = false;
             } if (this.upPressed) {
                 if (this.target_location[1][3] < yMax) {
-                    this.target_location = this.target_location.times(Mat4.translation(0,1.00,0));
+                    this.target_location = this.target_location.times(Mat4.translation(0,2.00,0));
                 }
                 this.upPressed = false;
             } if (this.downPressed) {
                 if (this.target_location[1][3] > yMin) {
-                    this.target_location = this.target_location.times(Mat4.translation(0,-1.00,0));
+                    this.target_location = this.target_location.times(Mat4.translation(0,-2.00,0));
                 }
                 this.downPressed = false;
             }
