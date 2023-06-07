@@ -5,12 +5,14 @@
     <link href="assets/icon.png" rel="icon">
     <link rel="stylesheet" href="index.css">
     <title>Dodge</title>
-
 </head>
-<body style="background: White">
+<body style="background: white">
 <!---<div class="start-screen">
     <h1>Press ENTER To Start</h1>
 </div>--->
+<audio id="bgm" src="bgm.mp3" loop></audio>
+<button id="bgm-toggle" onclick="toggleBGM()">Toggle BGM</button>
+
 <div id="game-over-modal" class="modal">
     <div class="modal-content">
         <h2 id="title">Dodge King!(Dodge Blocks! Stay Alive!!! )</h2>
@@ -41,6 +43,29 @@
     const scenes = [Main_Scene, ...Additional_Scenes].map(scene => new scene());
     // This line creates your scene.
     new Canvas_Widget(element_to_replace, scenes);
+</script>
+<script type="text/javascript">
+    var bgm = document.getElementById("bgm");
+    var bgmToggle = document.getElementById("bgm-toggle");
+    var hasInteracted = false;
+
+    function toggleBGM() {
+        if (bgm.paused) {
+            bgm.play();
+            bgmToggle.innerHTML = "Pause BGM";
+        } else {
+            bgm.pause();
+            bgmToggle.innerHTML = "Play BGM";
+        }
+    }
+
+    // Play the BGM when the user interacts with the page
+    window.addEventListener("click", function() {
+        if (!hasInteracted) {
+            bgm.play();
+            hasInteracted = true;
+        }
+    });
 </script>
 <!--//<script src="tiny-graphics.js"></script>
 <script src="dodge.js"></script>-->
