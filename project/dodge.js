@@ -187,15 +187,15 @@ export class Dodge extends Scene {
         // The parameters of the Light are: position, color, size
         program_state.lights = [new Light(light_position, color(1, 0.8, 0.2, 1), 1000)];
 
-
+        // Update the final score text
+        const finalScore = document.getElementById("final-score");
+        finalScore.textContent = this.score;
+        // Update the final score text
         if (this.gameOver) {
             // Game over logic here, such as displaying a game over message or score
             const modal = document.getElementById("game-over-modal");
-            const finalScore = document.getElementById("final-score");
             const timePlayedElement = document.getElementById("time-played");
 
-            // Update the final score text
-            finalScore.textContent = this.score;
 
             // Calculate the time played
             const timePlayed = this.elapsedTime;
