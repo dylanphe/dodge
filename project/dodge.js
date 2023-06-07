@@ -298,12 +298,12 @@ export class Dodge extends Scene {
             // TODO: ADD MORE TRANFORMATION EFFECTS TO EACH OBJECT (ROTATION and SUCH)
             // Interactivities functions
             if (this.leftPressed) {
-                if (this.target_location[0][3] > xMin) {
+                if (this.target_location[0][3]-0.5 > xMin) {
                     this.target_location = this.target_location.times(Mat4.translation(-2.00,0,0));
                 }
                 this.leftPressed = false;
             } if (this.rightPressed) {
-                if (this.target_location[0][3] < xMax) {
+                if (this.target_location[0][3]+0.5 < xMax) {
                     this.target_location = this.target_location.times(Mat4.translation(2.00,0,0));
                 }
                 this.rightPressed = false;
