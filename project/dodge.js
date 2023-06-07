@@ -35,7 +35,7 @@ export class Dodge extends Scene {
             player: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 1, specularity: .2,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/ball.jpg"),
+                texture: new Texture("assets/ball.jpg"),
             }),
             smallBalls: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
@@ -44,32 +44,32 @@ export class Dodge extends Scene {
             land: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/land.jpg"),
+                texture: new Texture("assets/land.jpg"),
             }),
             sky: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/sky.png"),
+                texture: new Texture("assets/sky.png"),
             }),
             brick: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/brick.png", "NEAREST"),
+                texture: new Texture("assets/brick.png", "NEAREST"),
             }),
             cloud: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/cloud.png", "LINEAR_MIPMAP_LINEAR"),
+                texture: new Texture("assets/cloud.png", "LINEAR_MIPMAP_LINEAR"),
             }),
             gameover: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/gv.png"),
+                texture: new Texture("assets/gv.png"),
             }),
             gamestart: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
-                texture: new Texture("/assets/gs.png"),
+                texture: new Texture("assets/gs.png"),
             }),
 
         }
@@ -102,6 +102,7 @@ export class Dodge extends Scene {
         this.smallSquare_velocities = [];
         this.smallSquare_num = 0;
     }
+
     updateElapsedTime() {
         this.elapsedTime = performance.now() - this.startTime;
     }
@@ -636,6 +637,7 @@ export class Dodge extends Scene {
 
     }
 }
+
 
 class Texture_dup extends Textured_Phong {
     // Override the fragment_glsl_code() method to modify the shader
