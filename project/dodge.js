@@ -20,12 +20,11 @@ export class Dodge extends Scene {
             sphere4: new defs.Subdivision_Sphere(4),
             cube: new defs.Cube(),
             land: new defs.Square(),
-            sky: new defs.Square(),
             brick: new defs.Cube(),
-            cloud: new defs.Square(),
-            gameover: new defs.Square(),
+            square: new defs.Square(),
         };
 
+        // Change texture mapping
         this.shapes.land.arrays.texture_coord = this.shapes.land.arrays.texture_coord.map(vec2 => [vec2[0] * 10, vec2[1]]);
         this.shapes.brick.arrays.texture_coord = this.shapes.brick.arrays.texture_coord.map(vec2 => [vec2[0], vec2[1]*10]);
         this.shapes.sphere4.arrays.texture_coord = this.shapes.sphere4.arrays.texture_coord.map(vec2 => [vec2[0], vec2[1]]);
@@ -37,10 +36,13 @@ export class Dodge extends Scene {
                 color: hex_color("#000000"),
                 texture: new Texture("assets/ball.jpg"),
             }),
-            smallBalls: new Material(new defs.Phong_Shader(),
+            explosiveSquare: new Material(new Textured_Phong(), {
+                ambient: 1, diffusivity: 1, specularity: .2,
+                color: hex_color("#000000"),
+                texture: new Texture("assets/tnt.png"),
+            }),
+            smallSquare: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#FF0000")}),
-            vleftRec: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#FFFFFF")}),
             land: new Material(new Textured_Phong(), {
                 ambient: 1, diffusivity: 0.1, specularity: 0.1,
                 color: hex_color("#000000"),
@@ -74,9 +76,10 @@ export class Dodge extends Scene {
 
         }
 
+        // Fixed Camera location
         this.initial_camera_location = Mat4.look_at(vec3(0, 0, 50), vec3(0, 0, 0), vec3(0, 1, 0));
 
-        // Game State
+        // Game States:
         this.endTime = performance.now();
         clearInterval(this.timerInterval);
         this.gameOver = true;
@@ -101,8 +104,27 @@ export class Dodge extends Scene {
         this.smallSquare_positions = [];
         this.smallSquare_velocities = [];
         this.smallSquare_num = 0;
+
+        // Explosive Squares: Location and Velocities
+        this.explosiveSquare_positions = [];
+        this.explosiveSquare_velocities = [];
+        this.explosiveSquare_num = 0;
     }
 
+    // Function to control game interactivities
+    make_control_panel() {
+        // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+        this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.leftPressed = true;});
+        this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.rightPressed = true;});
+        this.new_line();
+        this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.upPressed = true;});
+        this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.downPressed = true;});
+        this.new_line();
+        this.new_line();
+        this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
+    }
+
+    // Function to update time when game is over
     updateElapsedTime() {
         this.elapsedTime = performance.now() - this.startTime;
     }
@@ -119,18 +141,8 @@ export class Dodge extends Scene {
             milliseconds.toString().padStart(2, "0")
         );
     }
-    make_control_panel() {
-        // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.leftPressed = true;});
-        this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.rightPressed = true;});
-        this.new_line();
-        this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.upPressed = true;});
-        this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.downPressed = true;});
-        this.new_line();
-        this.new_line();
-        this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
-    }
 
+    // Function to update game state when game is reset or over
     startGame() {
         // Reset game state
         if (this.gameOver == true) {
@@ -149,6 +161,9 @@ export class Dodge extends Scene {
             this.smallSquare_positions = [];
             this.smallSquare_velocities = [];
             this.smallSquare_num = 0;
+            this.explosiveSquare_positions = [];
+            this.explosiveSquare_velocities = [];
+            this.explosiveSquare_num = 0;
             this.vleftRec_positions = [];
             this.vleftRec_target = [];
             this.vleftRec_num = 0;
@@ -158,7 +173,6 @@ export class Dodge extends Scene {
             this.start = false;
         }
     }
-
     endGame() {
         // Other game over logic
 
@@ -227,7 +241,7 @@ export class Dodge extends Scene {
 
             var sky_transform = Mat4.identity().times(Mat4.translation(0, 4,-20))
                     .times(Mat4.scale(52.5, 25, 1));
-            this.shapes.sky.draw(
+            this.shapes.square.draw(
                 context,
                 program_state,
                 sky_transform,
@@ -249,14 +263,14 @@ export class Dodge extends Scene {
             .times(Mat4.scale(7, 7, 1))
             .times(Mat4.scale(-1, 1, 1));
 
-            this.shapes.cloud.draw(
+            this.shapes.square.draw(
                 context,
                 program_state,
                 cloud1_transform,
                 this.materials.cloud
             );
 
-            this.shapes.cloud.draw(
+            this.shapes.square.draw(
                 context,
                 program_state,
                 cloud2_transform,
@@ -267,14 +281,14 @@ export class Dodge extends Scene {
                                                         .times(Mat4.scale(25, 25, 1));
             
             if (this.start == false ) {
-                this.shapes.sky.draw(
+                this.shapes.square.draw(
                     context,
                     program_state,
                     gameover_transform,
                     this.materials.gameover
                 );
             } else {
-                this.shapes.sky.draw(
+                this.shapes.square.draw(
                     context,
                     program_state,
                     gameover_transform,
@@ -308,12 +322,12 @@ export class Dodge extends Scene {
                 }
                 this.rightPressed = false;
             } if (this.upPressed) {
-                if (this.target_location[1][3] < yMax) {
+                if (this.target_location[1][3]+0.5 < yMax) {
                     this.target_location = this.target_location.times(Mat4.translation(0,2.00,0));
                 }
                 this.upPressed = false;
             } if (this.downPressed) {
-                if (this.target_location[1][3] > yMin) {
+                if (this.target_location[1][3]-0.5 > yMin) {
                     this.target_location = this.target_location.times(Mat4.translation(0,-2.00,0));
                 }
                 this.downPressed = false;
@@ -334,14 +348,58 @@ export class Dodge extends Scene {
                 this.materials.player
             );
 
-            // TODO: ADD other obstacles
+            // Draw background
+            var land_transform = Mat4.identity().times(Mat4.translation(0, -25,-20))
+            .times(Mat4.scale(52.5, 4, 1));
+            this.shapes.land.draw(
+            context,
+            program_state,
+            land_transform,
+            this.materials.land
+            );
+            var sky_transform = Mat4.identity().times(Mat4.translation(0, 4,-20))
+            .times(Mat4.scale(52.5, 25, 1));
+            this.shapes.square.draw(
+            context,
+            program_state,
+            sky_transform,
+            this.materials.sky
+            );
+            // Clouds
+            const x_position = Math.sin(t * Math.PI);
+            // Create the cloud1_transform matrix
+            const cloud1_transform = Mat4.identity()
+            .times(Mat4.translation(29 - x_position * 1, 20, -10))
+            .times(Mat4.scale(7, 7, 1));
+            // Create the cloud2_transform matrix
+            const cloud2_transform = Mat4.identity()
+            .times(Mat4.translation(-28 - x_position * 1, 18, -10))
+            .times(Mat4.scale(7, 7, 1))
+            .times(Mat4.scale(-1, 1, 1));
+            this.shapes.square.draw(
+            context,
+            program_state,
+            cloud1_transform,
+            this.materials.cloud
+            );
+            this.shapes.square.draw(
+            context,
+            program_state,
+            cloud2_transform,
+            this.materials.cloud
+            );
+
             
             // vRec Implementation
-            const recInterval = 10;
+            let recInterval = 10;
             const rec_maxCnt = 1;
             let recSpeed = 0.1;
             let rec_t = t%recInterval;
             let randSpawn = Math.floor(Math.random() * 2);
+
+            if (this.score >= 30) {
+                recInterval = 6;
+            }
 
             // vleftRec Spawning behaviors
             if (rec_t >= (recInterval-0.02) && this.vleftRec_num < rec_maxCnt && randSpawn == 0 && this.score >= 6) {
@@ -429,8 +487,9 @@ export class Dodge extends Scene {
                 }
             }
 
-            // Small Squares Implementation
+            // Small Squares and Explosive Squares Implementations
             const smallSquare_xPos = Math.random() < 0.5 ? 36 : -36;
+            const explosiveSquare_xPos = Math.random() < 0.5 ? 35 : -35;
             const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
             let base_speedX = 0.1
             let base_speedY = 0.1
@@ -441,19 +500,31 @@ export class Dodge extends Scene {
             const xVel = (Math.random() < 0.5 ? (base_speedX + Math.random() * base_speedX): (-base_speedX - Math.random() * base_speedX));
             const yVel = (Math.random() < 0.5 ? (base_speedY + Math.random() * base_speedY): (-base_speedY - Math.random() * base_speedY));
             const smallSquare_interval = 2;
+            const explosiveSquare_interval = 5;
+            let explosiveSquare_maxCnt = 3;
             let smallSquare_maxCnt = 5;
+
             if (this.score >= 20) {
-                smallSquare_maxCnt = 7
+                smallSquare_maxCnt = 3;
             }
-            // Small Squares spawning behaviors
+
+            // smallSquares spawning behaviors
             let smallSquare_t = t%smallSquare_interval;
-            if (smallSquare_t >= (smallSquare_interval-0.02) && this.smallSquare_num < smallSquare_maxCnt) {
+            if (smallSquare_t >= (smallSquare_interval-0.019) && this.smallSquare_num < smallSquare_maxCnt) {
                 this.smallSquare_positions.push(Mat4.identity().times(Mat4.translation(smallSquare_xPos,smallSquare_yPos,0))); // Initial position
                 this.smallSquare_velocities.push(vec4(xVel, yVel, 0, 0)); // Initial velocity
                 this.smallSquare_num += 1;
             }
+
+            // ExplosiveSquares spawning behaviors
+            let explosiveSquare_t = t%explosiveSquare_interval; 
+            if (explosiveSquare_t >= (explosiveSquare_interval-0.02) && this.explosiveSquare_num < explosiveSquare_maxCnt && this.score >= 20) {
+                this.explosiveSquare_positions.push(Mat4.identity().times(Mat4.translation(explosiveSquare_xPos,19,0))); // Initial position
+                this.explosiveSquare_velocities.push(vec4(xVel, yVel, 0, 0)); // Initial velocity
+                this.explosiveSquare_num += 1;
+            }
             
-            // Small Square Movements
+            // Small Squares Movements
             for (let i = 0; i < this.smallSquare_positions.length; i++) {
                 let smallSquare_dist = Math.sqrt(Math.pow(this.smallSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[i][1][3] - this.player_location[1][3], 2));
                 
@@ -551,8 +622,100 @@ export class Dodge extends Scene {
                 }
             }
 
-            // Small Squares Collision Detection for Explosion
-            // TODO: ADD EXPLOSION
+            // Explosive Squares Movements
+            for (let i = 0; i < this.explosiveSquare_positions.length; i++) {
+                let explosiveSquare_dist = Math.sqrt(Math.pow(this.explosiveSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.explosiveSquare_positions[i][1][3] - this.player_location[1][3], 2));
+                
+                // Collision Detection for Player with Small Squares
+                if (explosiveSquare_dist > 0 && explosiveSquare_dist < 1.4) {
+                    this.gameOver = true;
+                    this.start = false;
+                } else {
+                    // Follow the player if it is within a certain radius
+                    let orbitinnerRadius = 7
+                    let orbitoutterRadius = 12
+                    if (explosiveSquare_dist > orbitinnerRadius && explosiveSquare_dist < orbitoutterRadius) {
+                        // If it is to the right of the player
+                        if (this.explosiveSquare_positions[i][0][3] >= this.player_location[0][3] + orbitinnerRadius && this.explosiveSquare_velocities[i][0] > 0) {
+                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
+                        } 
+                        // If it is to the left of the player
+                        else if (this.explosiveSquare_positions[i][0][3] < this.player_location[0][3] - orbitinnerRadius && this.explosiveSquare_velocities[i][0] < 0) {
+                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
+                        }
+                        // If it is above of the player
+                        if (this.explosiveSquare_positions[i][1][3] > this.player_location[1][3] + orbitinnerRadius-2.5 && this.explosiveSquare_velocities[i][1] > 0) {
+                            this.explosiveSquare_velocities[i][1] = -this.explosiveSquare_velocities[i][1];
+                        }
+                        // If it is below of the player
+                        else if (this.explosiveSquare_positions[i][1][3] < this.player_location[1][3] - orbitinnerRadius-2.5 && this.explosiveSquare_velocities[i][1] < 0) {
+                            this.explosiveSquare_velocities[i][1] = -this.explosiveSquare_velocities[i][1];
+                        }
+                    }
+                    // Bounce-Off-Wall behaviors
+                    if (this.explosiveSquare_positions[i][0][3] + 0.125 >= xMax || this.explosiveSquare_positions[i][0][3] - 0.125 <= xMin) {
+                        this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
+                    }
+                    if (this.explosiveSquare_positions[i][1][3] + 0.125 >= yMax || this.explosiveSquare_positions[i][1][3] - 0.125 <= yMin) {
+                        this.explosiveSquare_velocities[i][1] = -this.explosiveSquare_velocities[i][1];
+                    }
+
+                    // Bounce-Off-vleftRec bahaviors
+                    for (let j = 0; j < this.vleftRec_positions.length; j++) {
+                        let vleftRecX = this.vleftRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                        let vleftRecY = this.vleftRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+
+                        // Calculate the leftmost and rightmost positions of the single rectangle
+                        let vleftRecLeft = vleftRecX - 1;
+                        let vleftRecRight = vleftRecX + 1;
+                        // Calculate the topmost and bottommost positions of the single rectangle
+                        const vleftRecTop = vleftRecY - 12;
+                        const vleftRecBottom = vleftRecY + 12;
+                        if (this.explosiveSquare_positions[i][0][3] < vleftRecRight && this.explosiveSquare_positions[i][0][3] > vleftRecLeft && this.explosiveSquare_positions[i][1][3] >= vleftRecTop &&
+                            this.explosiveSquare_positions[i][1][3] <= vleftRecBottom)
+                        {
+                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
+                            this.explosiveSquare_positions[i][0][3] += 4*this.explosiveSquare_velocities[i][0];
+                        }
+                    }
+
+                    // Bounce-Off-vrightRec bahaviors
+                    for (let j = 0; j < this.vrightRec_positions.length; j++) {
+                        let vrightRecX = this.vrightRec_positions[j][0][3];  // X-coordinate of vleftRec center
+                        let vrightRecY = this.vrightRec_positions[j][1][3];  // Y-coordinate of vleftRec center
+
+                        // Calculate the leftmost and rightmost positions of the single rectangle
+                        let vrightRecLeft = vrightRecX - 1;
+                        let vrightRecRight = vrightRecX + 1;
+                        // Calculate the topmost and bottommost positions of the single rectangle
+                        const vrightRecTop = vrightRecY - 12;
+                        const vrightRecBottom = vrightRecY + 12;
+                        if (this.explosiveSquare_positions[i][0][3] < vrightRecRight && this.explosiveSquare_positions[i][0][3] > vrightRecLeft && this.explosiveSquare_positions[i][1][3] >= vrightRecTop &&
+                            this.explosiveSquare_positions[i][1][3] <= vrightRecBottom)
+                        {
+                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
+                            if (this.score >= 16) {
+                                this.explosiveSquare_positions[i][0][3] += 2*this.explosiveSquare_velocities[i][0];
+        
+                            } else {
+                                this.explosiveSquare_positions[i][0][3] += 4*this.explosiveSquare_velocities[i][0];
+                            }
+                        }
+                    }
+
+                    // Drive Behaviors
+                    if (this.explosiveSquare_positions[i][0][3] == this.player_location[0][3]) {
+                        this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
+                    } else if (this.explosiveSquare_positions[i][1][3] == this.player_location[1][3]) {
+                        this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
+                    } else {
+                        this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
+                        this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
+                    }
+                }
+            }
+
+            // Collision Detection for Small squares
             for (let i = 0; i < this.smallSquare_positions.length; i++) {
                 for (let j = 0; j < this.smallSquare_positions.length; j++) {
                     if(i != j) {
@@ -573,99 +736,78 @@ export class Dodge extends Scene {
 
                     }
                 }
-              }
+            }
 
-            // Draw the smallBalls
+            // Collision Detection for Explosive squares
+            // TODO: ADD EXPLOSIONS
+            for (let i = 0; i < this.explosiveSquare_positions.length; i++) {
+
+                for (let k = 0; k < this.smallSquare_positions.length; k++) {
+                    if (i < this.explosiveSquare_positions.length) {
+                        const dist = Math.sqrt(
+                            Math.pow(this.explosiveSquare_positions[i][0][3] - this.smallSquare_positions[k][0][3], 2) +
+                            Math.pow(this.explosiveSquare_positions[i][1][3] - this.smallSquare_positions[k][1][3], 2)
+                            );
+
+                        // Check if the distance is less than a threshold (indicating a collision)
+                        if (dist < 1) {
+                        this.smallSquare_positions.splice(k, 1);
+                        this.smallSquare_velocities.splice(k, 1);
+                        this.explosiveSquare_positions.splice(i, 1);
+                        this.explosiveSquare_velocities.splice(i, 1);
+                        this.explosiveSquare_num -= 1;
+                        this.smallSquare_num -= 1;
+                        this.score += 3;
+                        }
+                    }
+                }
+                
+                // With itself
+                for (let j = 0; j < this.explosiveSquare_positions.length; j++) {
+                    if(i != j && j < this.explosiveSquare_positions.length) {
+                        const dist = Math.sqrt(
+                            Math.pow(this.explosiveSquare_positions[i][0][3] - this.explosiveSquare_positions[j][0][3], 2) +
+                            Math.pow(this.explosiveSquare_positions[i][1][3] - this.explosiveSquare_positions[j][1][3], 2)
+                            );
+
+                        // Check if the distance is less than a threshold (indicating a collision)
+                        if (dist < 1) {
+                        this.explosiveSquare_positions.splice(j, 1);
+                        this.explosiveSquare_velocities.splice(j, 1);
+                        this.explosiveSquare_positions.splice(i, 1);
+                        this.explosiveSquare_velocities.splice(i, 1);
+                        this.explosiveSquare_num -= 2;
+                        this.score += 3;
+                        }
+
+                    }
+                }
+
+            }
+
+            // Draw the small Squares
             for (let i = 0; i < this.smallSquare_positions.length; i++) {
                 var smallSquare_transform = this.smallSquare_positions[i].times(Mat4.scale(0.4, 0.4, 0.4));
                 this.shapes.cube.draw(
                     context,
                     program_state,
                     smallSquare_transform,
-                    this.materials.smallBalls
+                    this.materials.smallSquare
                 );
             }
 
-            // Draw background
-            var land_transform = Mat4.identity().times(Mat4.translation(0, -25,-20))
-                                                    .times(Mat4.scale(52.5, 4, 1));
-            this.shapes.land.draw(
-                context,
-                program_state,
-                land_transform,
-                this.materials.land
-            );
-
-            var sky_transform = Mat4.identity().times(Mat4.translation(0, 4,-20))
-                                                .times(Mat4.scale(52.5, 25, 1));
-            this.shapes.sky.draw(
-                context,
-                program_state,
-                sky_transform,
-                this.materials.sky
-            );
-
-            // Calculate the x position based on time
-            //const x_position = (t % 10) / 10; // Range from 0 to 1 over 8 seconds
-            const x_position = Math.sin(t * Math.PI);
-
-            // Create the plane_transform matrix
-            const cloud1_transform = Mat4.identity()
-            .times(Mat4.translation(29 - x_position * 1, 20, -10))
-            .times(Mat4.scale(7, 7, 1));
-
-            // Create the plane_transform matrix
-            const cloud2_transform = Mat4.identity()
-            .times(Mat4.translation(-28 - x_position * 1, 18, -10))
-            .times(Mat4.scale(7, 7, 1))
-            .times(Mat4.scale(-1, 1, 1));
-
-            this.shapes.cloud.draw(
-                context,
-                program_state,
-                cloud1_transform,
-                this.materials.cloud
-            );
-
-            this.shapes.cloud.draw(
-                context,
-                program_state,
-                cloud2_transform,
-                this.materials.cloud
-            );
+            // Draw the explosive Squares
+            for (let i = 0; i < this.explosiveSquare_positions.length; i++) {
+                var explosiveSquare_transform = this.explosiveSquare_positions[i].times(Mat4.scale(0.4, 0.4, 0.4));
+                this.shapes.cube.draw(
+                    context,
+                    program_state,
+                    explosiveSquare_transform,
+                    this.materials.explosiveSquare
+                );
+            }
         }
 
-    }
-}
-
-
-class Texture_dup extends Textured_Phong {
-    // Override the fragment_glsl_code() method to modify the shader
-    fragment_glsl_code() {
-        return this.shared_glsl_code() + `
-        varying vec2 f_tex_coord;
-        uniform sampler2D texture;
-        uniform float animation_time;
-        
-        void main(){
-            // Limit animation_time to within the range of [0,1]
-            vec2 slide = vec2(f_tex_coord - vec2(2. * mod(animation_time, 1.), 0.0));
-            
-            // Sample the texture image in the correct place.
-            vec4 tex_color = texture2D(texture, slide);  
-            
-            // Limit the slide_tex_coordinate to within the range of [0,1]
-            float slideX = mod(slide.x, 1.0);
-            float slideY = mod(slide.y, 1.0);
-
-            if( tex_color.w < .01 ) discard;
-            // Compute an initial (ambient) color:
-            gl_FragColor = vec4( ( tex_color.xyz + shape_color.xyz ) * ambient, shape_color.w * tex_color.w ); 
-            // Compute the final color with contributions from lights.
-            gl_FragColor.xyz += phong_model_lights( normalize( N ), vertex_worldspace );                  
-
-            }
-        `;
     }
 }
 
