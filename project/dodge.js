@@ -98,6 +98,7 @@ export class Dodge extends Scene {
         this.rightPressed = false;
         this.upPressed = false;
         this.downPressed = false;
+        this.frontPressed = false;
 
         // Verticle Single Rec: Location
         this.vleftRec_positions = [];
@@ -124,6 +125,7 @@ export class Dodge extends Scene {
         this.new_line();
         this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.upPressed = true;});
         this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.downPressed = true;});
+        this.key_triggered_button("Move Front", ["Backspace"], () => {this.frontPressed = true;});
         this.new_line();
         this.new_line();
         this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
@@ -163,6 +165,7 @@ export class Dodge extends Scene {
             this.rightPressed = false;
             this.upPressed = false;
             this.downPressed = false;
+            this.frontPressed = false;
             this.smallSquare_positions = [];
             this.smallSquare_velocities = [];
             this.smallSquare_num = 0;
@@ -336,6 +339,9 @@ export class Dodge extends Scene {
                     this.target_location = this.target_location.times(Mat4.translation(0,-2.00,0));
                 }
                 this.downPressed = false;
+            } if (this.frontPressed) {
+                this.target_location = this.target_location.times(Mat4.translation(0,0,2));
+                this.frontPressed = false;
             }
 
             // Smoothing out player's movement
@@ -403,21 +409,21 @@ export class Dodge extends Scene {
             let randSpawn = Math.floor(Math.random() * 2);
 
             if (this.score >= 30) {
-                recInterval = 8;
+                recInterval = 10;
             }
 
             // vleftRec Spawning behaviors
-            if (rec_t >= (recInterval-0.02) && this.vleftRec_num < rec_maxCnt && randSpawn == 0 && this.score >= 6) {
+            if (rec_t >= (recInterval-0.019) && this.vleftRec_num < rec_maxCnt && randSpawn == 0 && this.score >= 6) {
                 if (this.vrightRec_num == 0) {
-                    this.vleftRec_positions.push(Mat4.identity().times(Mat4.translation(-35,0,0))); // Initial position
+                    this.vleftRec_positions.push(Mat4.identity().times(Mat4.translation(-34,0,0))); // Initial position
                     this.vleftRec_num += 1;
                 }
             }
 
             // vrightRec Spawning behaviors
-            if (rec_t >= (recInterval-0.02) && this.vrightRec_num < rec_maxCnt && randSpawn == 1 && this.score >= 10) {
+            if (rec_t >= (recInterval-0.019) && this.vrightRec_num < rec_maxCnt && randSpawn == 1 && this.score >= 10) {
                 if (this.vleftRec_num == 0) {
-                    this.vrightRec_positions.push(Mat4.identity().times(Mat4.translation(35,0,0))); // Initial position
+                    this.vrightRec_positions.push(Mat4.identity().times(Mat4.translation(34,0,0))); // Initial position
                     this.vrightRec_num += 1;
                 }
             }
@@ -433,7 +439,7 @@ export class Dodge extends Scene {
                 const vleftRecTop = vleftRecY - 12;
                 const vleftRecBottom = vleftRecY + 12;
                 if (this.player_location[0][3] < vleftRecRight && this.player_location[0][3] > vleftRecLeft && this.player_location[1][3] >= vleftRecTop &&
-                    this.player_location[1][3] <= vleftRecBottom)
+                    this.player_location[1][3] <= vleftRecBottom && this.player_location[2][3] == 0)
                 {
                     this.gameOver = true;
                     this.start = false;                     
@@ -451,7 +457,7 @@ export class Dodge extends Scene {
                 const vrightRecTop = vrightRecY - 12;
                 const vrightRecBottom = vrightRecY + 12;
                 if (this.player_location[0][3] < vrightRecRight && this.player_location[0][3] > vrightRecLeft && this.player_location[1][3] >= vrightRecTop &&
-                    this.player_location[1][3] <= vrightRecBottom)
+                    this.player_location[1][3] <= vrightRecBottom && this.player_location[2][3] == 0)
                 {
                     this.gameOver = true;
                     this.start = false;                        
@@ -469,7 +475,7 @@ export class Dodge extends Scene {
                     vleftRec_transform,
                     this.materials.brick
                 );
-                if (this.vleftRec_positions[i][0][3] > 35) {
+                if (this.vleftRec_positions[i][0][3] > 34) {
                     this.vleftRec_positions.splice(i, 1);
                     this.vleftRec_num -= 1;
                 }
@@ -486,7 +492,7 @@ export class Dodge extends Scene {
                     vrightRec_transform,
                     this.materials.brick
                 );
-                if (this.vrightRec_positions[i][0][3] < -35) {
+                if (this.vrightRec_positions[i][0][3] < -34) {
                     this.vrightRec_positions.splice(i, 1);
                     this.vrightRec_num -= 1;
                 }
@@ -494,7 +500,7 @@ export class Dodge extends Scene {
 
             // Small Squares and Explosive Squares Implementations
             const smallSquare_xPos = Math.random() < 0.5 ? 36 : -36;
-            const explosiveSquare_xPos = Math.random() < 0.5 ? 35 : -35;
+            const explosiveSquare_xPos = Math.random() < 0.5 ? 34 : -34;
             const smallSquare_yPos = Math.random() < 0.5 ? 19 : -19;
             let base_speedX = 0.1
             let base_speedY = 0.1
@@ -511,6 +517,10 @@ export class Dodge extends Scene {
 
             if (this.score >= 25) {
                 smallSquare_maxCnt = 3;
+            }
+
+            if (this.score >= 40) {
+                smallSquare_maxCnt = 5;
             }
 
             // smallSquares spawning behaviors
@@ -534,7 +544,7 @@ export class Dodge extends Scene {
                 let smallSquare_dist = Math.sqrt(Math.pow(this.smallSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.smallSquare_positions[i][1][3] - this.player_location[1][3], 2));
                 
                 // Collision Detection for Player with Small Squares
-                if (smallSquare_dist > 0 && smallSquare_dist < 1.4) {
+                if (smallSquare_dist > 0 && smallSquare_dist < 1.4 && this.player_location[2][3] == 0) {
                     this.gameOver = true;
                     this.start = false;
                 } else {
@@ -632,7 +642,7 @@ export class Dodge extends Scene {
                 let explosiveSquare_dist = Math.sqrt(Math.pow(this.explosiveSquare_positions[i][0][3] - this.player_location[0][3], 2) + Math.pow(this.explosiveSquare_positions[i][1][3] - this.player_location[1][3], 2));
                 
                 // Collision Detection for Player with Small Squares
-                if (explosiveSquare_dist > 0 && explosiveSquare_dist < 1.4) {
+                if (explosiveSquare_dist > 0 && explosiveSquare_dist < 1.4 && this.player_location[2][3] == 0) {
                     this.gameOver = true;
                     this.start = false;
                 } else {
@@ -786,7 +796,7 @@ export class Dodge extends Scene {
                             let yTop = yPos - 4;
                             let yBot = yPos + 4;
                             if (this.player_location[0][3] < xRight && this.player_location[0][3] > xLeft && this.player_location[1][3] >= yTop &&
-                                this.player_location[1][3] <= yBot)
+                                this.player_location[1][3] <= yBot && this.player_location[2][3] == 0)
                             {
                                 this.gameOver = true;
                                 this.start = false;                        
@@ -832,7 +842,7 @@ export class Dodge extends Scene {
                             let yTop = yPos - 8;
                             let yBot = yPos + 8;
                             if (this.player_location[0][3] < xRight && this.player_location[0][3] > xLeft && this.player_location[1][3] >= yTop &&
-                                this.player_location[1][3] <= yBot)
+                                this.player_location[1][3] <= yBot && this.player_location[2][3] == 0)
                             {
                                 this.gameOver = true;
                                 this.start = false;                        
