@@ -545,8 +545,8 @@ export class Dodge extends Scene {
                 
                 // Collision Detection for Player with Small Squares
                 if (smallSquare_dist > 0 && smallSquare_dist < 1.4 && this.player_location[2][3] == 0) {
-                    this.gameOver = true;
-                    this.start = false;
+                   this.gameOver = true;
+                   this.start = false;
                 } else {
                     // Follow the player if it is within a certain radius
                     let orbitinnerRadius = 5
@@ -676,6 +676,7 @@ export class Dodge extends Scene {
                     }
 
                     // Bounce-Off-vleftRec bahaviors
+                    let explosionHit = false
                     for (let j = 0; j < this.vleftRec_positions.length; j++) {
                         let vleftRecX = this.vleftRec_positions[j][0][3];  // X-coordinate of vleftRec center
                         let vleftRecY = this.vleftRec_positions[j][1][3];  // Y-coordinate of vleftRec center
@@ -689,10 +690,33 @@ export class Dodge extends Scene {
                         if (this.explosiveSquare_positions[i][0][3] < vleftRecRight && this.explosiveSquare_positions[i][0][3] > vleftRecLeft && this.explosiveSquare_positions[i][1][3] >= vleftRecTop &&
                             this.explosiveSquare_positions[i][1][3] <= vleftRecBottom)
                         {
-                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
-                            this.explosiveSquare_positions[i][0][3] += 4*this.explosiveSquare_velocities[i][0];
-                        }
+                  
+                                let xPos = this.explosiveSquare_positions[i][0][3];
+                                let yPos = this.explosiveSquare_positions[i][1][3];
+                                this.explosiveSquare_num -= 1;
+                                this.score += 2;
+                                var scale_interval = Math.min(1.0, t / 2);
+                                var currentScale = 0.5 + (6 - 0.5) * scale_interval;
+                                var explosion_transform = Mat4.identity().times(Mat4.translation(xPos, yPos, 0))
+                                .times(Mat4.scale(currentScale, currentScale, currentScale));
+                                // Calculate the leftmost and rightmost positions of the explosion
+                                let xLeft = xPos - 4;
+                                let xRight = xPos + 4;
+                                // Calculate the topmost and bottommost positions of the single rectangle
+                                let yTop = yPos - 4;
+                                let yBot = yPos + 4;
+                                if (this.player_location[0][3] < xRight && this.player_location[0][3] > xLeft && this.player_location[1][3] >= yTop &&
+                                    this.player_location[1][3] <= yBot)
+                                {
+                                    this.gameOver = true;
+                                    this.start = false;                        
+                                }
+                                this.shapes.square.draw(context, program_state, explosion_transform, this.materials.explosion)
+                                this.explosiveSquare_positions.splice(i, 1);
+                                this.explosiveSquare_velocities.splice(i, 1);
+                                explosionHit = true
                     }
+                }
 
                     // Bounce-Off-vrightRec bahaviors
                     for (let j = 0; j < this.vrightRec_positions.length; j++) {
@@ -708,24 +732,46 @@ export class Dodge extends Scene {
                         if (this.explosiveSquare_positions[i][0][3] < vrightRecRight && this.explosiveSquare_positions[i][0][3] > vrightRecLeft && this.explosiveSquare_positions[i][1][3] >= vrightRecTop &&
                             this.explosiveSquare_positions[i][1][3] <= vrightRecBottom)
                         {
-                            this.explosiveSquare_velocities[i][0] = -this.explosiveSquare_velocities[i][0];
-                            if (this.score >= 16) {
-                                this.explosiveSquare_positions[i][0][3] += 2*this.explosiveSquare_velocities[i][0];
-        
-                            } else {
-                                this.explosiveSquare_positions[i][0][3] += 4*this.explosiveSquare_velocities[i][0];
-                            }
+                          
+                                let xPos = this.explosiveSquare_positions[i][0][3];
+                                let yPos = this.explosiveSquare_positions[i][1][3];
+
+                                this.explosiveSquare_num -= 1;
+                                this.score += 2;
+                                var scale_interval = Math.min(1.0, t / 2);
+                                var currentScale = 0.5 + (6 - 0.5) * scale_interval;
+                                var explosion_transform = Mat4.identity().times(Mat4.translation(xPos, yPos, 0))
+                                .times(Mat4.scale(currentScale, currentScale, currentScale));
+                                // Calculate the leftmost and rightmost positions of the explosion
+                                let xLeft = xPos - 4;
+                                let xRight = xPos + 4;
+                                // Calculate the topmost and bottommost positions of the single rectangle
+                                let yTop = yPos - 4;
+                                let yBot = yPos + 4;
+                                if (this.player_location[0][3] < xRight && this.player_location[0][3] > xLeft && this.player_location[1][3] >= yTop &&
+                                    this.player_location[1][3] <= yBot)
+                                {
+                                    this.gameOver = true;
+                                    this.start = false;                        
+                                }
+                                this.shapes.square.draw(context, program_state, explosion_transform, this.materials.explosion)
+                                this.explosiveSquare_positions.splice(i, 1);
+                                this.explosiveSquare_velocities.splice(i, 1);
+                                explosionHit = true
+
                         }
                     }
 
                     // Drive Behaviors
-                    if (this.explosiveSquare_positions[i][0][3] == this.player_location[0][3]) {
-                        this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
-                    } else if (this.explosiveSquare_positions[i][1][3] == this.player_location[1][3]) {
-                        this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
-                    } else {
-                        this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
-                        this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
+                    if(!explosionHit){
+                        if (this.explosiveSquare_positions[i][0][3] == this.player_location[0][3]) {
+                            this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
+                        } else if (this.explosiveSquare_positions[i][1][3] == this.player_location[1][3]) {
+                            this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
+                        } else {
+                            this.explosiveSquare_positions[i][0][3] += this.explosiveSquare_velocities[i][0];
+                            this.explosiveSquare_positions[i][1][3] += this.explosiveSquare_velocities[i][1];
+                        }
                     }
                 }
             }
@@ -741,23 +787,19 @@ export class Dodge extends Scene {
 
                         // Check if the distance is less than a threshold (indicating a collision)
                         if (dist < 1) {
-                        this.smallSquare_positions.splice(j, 1);
-                        this.smallSquare_velocities.splice(j, 1);
-                        this.smallSquare_positions.splice(i, 1);
-                        this.smallSquare_velocities.splice(i, 1);
-                        this.smallSquare_num -= 2;
-                        this.score += 2;
+                            this.smallSquare_positions.splice(j, 1);
+                            this.smallSquare_velocities.splice(j, 1);
+                            this.smallSquare_positions.splice(i, 1);
+                            this.smallSquare_velocities.splice(i, 1);
+                            this.smallSquare_num -= 2;
+                            this.score += 2;
                         }
 
                     }
                 }
             }
 
-            // Collision Detection for Explosive squares
-            // TODO: ADD EXPLOSIONS
-            const MAX_EXPLOSION_SIZE = 8;
-            //this.explosionList = []
-            
+            // Collision Detection for Explosive squares            
             for (let i = 0; i < this.explosiveSquare_positions.length; i++) {
 
                 for (let k = 0; k < this.smallSquare_positions.length; k++) {
@@ -802,6 +844,7 @@ export class Dodge extends Scene {
                                 this.start = false;                        
                             }
                             this.shapes.square.draw(context, program_state, explosion_transform, this.materials.explosion)
+                            
                         }
                     }
                 }
