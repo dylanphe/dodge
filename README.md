@@ -1,11 +1,15 @@
 # Final Project - Report 
+
 **Project: Dodge**
+
 **CS174A - Professor Asish Law**
 
 ## Team Members:
 
 Dylan Phe	UID: 505-834-475	Email: dylanphe@g.ucla.edu
+
 Ming Chen	UID:  705-845-642      Email: ming95@g.ucla.edu
+
 Brandon Tran, UID: 705-830-462	Email: tranbrandon1233@gmail.com
 
 ## Background and Development:
