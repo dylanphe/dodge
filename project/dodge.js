@@ -98,7 +98,7 @@ export class Dodge extends Scene {
         this.rightPressed = false;
         this.upPressed = false;
         this.downPressed = false;
-        this.frontPressed = false;
+        //this.frontPressed = false;
 
         // Verticle Single Rec: Location
         this.vleftRec_positions = [];
@@ -125,7 +125,7 @@ export class Dodge extends Scene {
         this.new_line();
         this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.upPressed = true;});
         this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.downPressed = true;});
-        this.key_triggered_button("Move Front", ["Backspace"], () => {this.frontPressed = true;});
+        //this.key_triggered_button("Move Front", ["Backspace"], () => {this.frontPressed = true;}); for demo
         this.new_line();
         this.new_line();
         this.key_triggered_button("Start", ["Enter"], () => {this.startGame();});
@@ -165,7 +165,7 @@ export class Dodge extends Scene {
             this.rightPressed = false;
             this.upPressed = false;
             this.downPressed = false;
-            this.frontPressed = false;
+            //this.frontPressed = false;
             this.smallSquare_positions = [];
             this.smallSquare_velocities = [];
             this.smallSquare_num = 0;
@@ -339,10 +339,11 @@ export class Dodge extends Scene {
                     this.target_location = this.target_location.times(Mat4.translation(0,-2.00,0));
                 }
                 this.downPressed = false;
-            } if (this.frontPressed) {
+            } 
+            /*if (this.frontPressed) {
                 this.target_location = this.target_location.times(Mat4.translation(0,0,2));
                 this.frontPressed = false;
-            }
+            }*/
 
             // Smoothing out player's movement
             const blending_factor = 0.25;
@@ -439,7 +440,7 @@ export class Dodge extends Scene {
                 const vleftRecTop = vleftRecY - 12;
                 const vleftRecBottom = vleftRecY + 12;
                 if (this.player_location[0][3] < vleftRecRight && this.player_location[0][3] > vleftRecLeft && this.player_location[1][3] >= vleftRecTop &&
-                    this.player_location[1][3] <= vleftRecBottom && this.player_location[2][3] == 0)
+                    this.player_location[1][3] <= vleftRecBottom)
                 {
                     this.gameOver = true;
                     this.start = false;                     
@@ -457,7 +458,7 @@ export class Dodge extends Scene {
                 const vrightRecTop = vrightRecY - 12;
                 const vrightRecBottom = vrightRecY + 12;
                 if (this.player_location[0][3] < vrightRecRight && this.player_location[0][3] > vrightRecLeft && this.player_location[1][3] >= vrightRecTop &&
-                    this.player_location[1][3] <= vrightRecBottom && this.player_location[2][3] == 0)
+                    this.player_location[1][3] <= vrightRecBottom)
                 {
                     this.gameOver = true;
                     this.start = false;                        
